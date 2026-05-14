@@ -652,6 +652,34 @@ svg {
   padding: 7px 10px;
 }
 
+.result-badge {
+  align-items: center;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.result-badge--won {
+  background: rgba(52, 211, 153, 0.13);
+  border-color: rgba(52, 211, 153, 0.34);
+  color: #bbf7d0;
+}
+
+.result-badge--lost {
+  background: rgba(251, 113, 133, 0.12);
+  border-color: rgba(251, 113, 133, 0.32);
+  color: #fecdd3;
+}
+
+.result-badge--partial {
+  background: rgba(250, 204, 21, 0.12);
+  border-color: rgba(250, 204, 21, 0.3);
+  color: #fde68a;
+}
+
+.result-badge__short {
+  display: none;
+}
+
 .row-actions {
   display: flex;
   gap: 6px;
@@ -750,6 +778,18 @@ svg {
   .filters-bar__export,
   .form-actions .button {
     width: 100%;
+  }
+
+  .result-badge__full {
+    display: none;
+  }
+
+  .result-badge__short {
+    display: inline;
+  }
+
+  .result-badge {
+    white-space: normal;
   }
 
   .card__content,

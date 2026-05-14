@@ -190,7 +190,7 @@ export function GameEntryForm({
                 type="number"
                 value={draft.gewonnen}
               />
-              <FieldDescription>Nur die Anzahl der gewonnenen Runden. Texte gehören in die Notiz.</FieldDescription>
+              <FieldDescription>Trage ein, wie viele der gespielten Runden gewonnen wurden. Beispiel: Bei 3 Runden und 1 Sieg ist Gewonnen = 1.</FieldDescription>
             </Field>
           </FieldGroup>
 
