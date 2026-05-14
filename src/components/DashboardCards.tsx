@@ -1,4 +1,4 @@
-import { Trophy, Users, Dice5, Hash, TrendingUp } from 'lucide-react'
+import { Dices, ListOrdered, Percent, Trophy, UsersRound } from 'lucide-react'
 import type { AnalyticsSummary } from '../types'
 import { Card, CardContent } from './ui/Card'
 
@@ -7,11 +7,11 @@ type DashboardCardsProps = {
 }
 
 const cards = [
-  { key: 'gesamtRunden', label: 'Gespielte Runden', icon: Hash },
-  { key: 'unterschiedlicheSpiele', label: 'Unterschiedliche Spiele', icon: Dice5 },
+  { key: 'gesamtRunden', label: 'Gespielte Runden', icon: ListOrdered },
+  { key: 'unterschiedlicheSpiele', label: 'Unterschiedliche Spiele', icon: Dices },
   { key: 'haeufigstesSpiel', label: 'Häufigstes Spiel', icon: Trophy },
-  { key: 'haeufigsterMitspieler', label: 'Meiste Mitspieler-Runden', icon: Users },
-  { key: 'gewinnquote', label: 'Gewinnquote', icon: TrendingUp },
+  { key: 'haeufigsterMitspieler', label: 'Meiste Mitspieler-Runden', icon: UsersRound },
+  { key: 'gewinnquote', label: 'Gewinnquote', icon: Percent },
 ] as const
 
 export function DashboardCards({ summary }: DashboardCardsProps) {
@@ -27,7 +27,9 @@ export function DashboardCards({ summary }: DashboardCardsProps) {
             <CardContent>
               <div className="metric-card__top">
                 <span>{card.label}</span>
-                <Icon aria-hidden="true" />
+                <span className="metric-card__icon">
+                  <Icon aria-hidden="true" />
+                </span>
               </div>
               <strong>{value}</strong>
             </CardContent>
