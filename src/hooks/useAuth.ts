@@ -65,14 +65,14 @@ export function useAuth() {
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        shouldCreateUser: false,
+        shouldCreateUser: true,
         emailRedirectTo: window.location.origin,
       },
     })
     setError(otpError?.message ?? null)
     setIsLoading(false)
 
-    return otpError ? {} : { message: 'Login-Link gesendet. Öffne die E-Mail auf diesem Gerät.' }
+    return otpError ? {} : { message: 'Login-Link gesendet. Öffne die E-Mail auf diesem Gerät. Falls noch kein App-Konto existiert, wird es dabei angelegt.' }
   }, [])
 
   const signOut = useCallback(async () => {

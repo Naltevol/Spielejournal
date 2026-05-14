@@ -105,7 +105,7 @@ export function LoginPage({
                 type="button"
                 variant="secondary"
               >
-                Login-Link per E-Mail senden
+                Passwortlosen Login-Link senden
               </Button>
             ) : null}
             <Button
