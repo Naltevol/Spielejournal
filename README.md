@@ -109,7 +109,7 @@ Der Import ist idempotent. Er erzeugt keine Duplikate, wenn er mehrfach ausgefü
 Spielname + Datum + Häufigkeit + Mitspieler + Gewonnen
 ```
 
-Spielnamen und Mitspieler werden beim Import normalisiert. Doppelte Mitspieler bleiben erhalten; wenn in einem Eintrag zweimal exakt `Lennart` steht, wird der zweite Eintrag automatisch als `Lennart S.` geführt.
+Spielnamen und Mitspieler werden beim Import normalisiert. Bekannte doppelte Mitspieler werden für Altdaten aufgelöst: ein zweiter `Lennart` wird als `Lennart S.` geführt, eine zweite `Lena` als `Lena B.`. Neue Einträge sollten doppelte Namen direkt mit Kürzel unterscheiden.
 
 ## Spielnamen-Normalisierung
 

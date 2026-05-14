@@ -307,6 +307,11 @@ svg {
   box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.16);
 }
 
+.input[aria-invalid='true'] {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.14);
+}
+
 .input::placeholder {
   color: #748195;
 }

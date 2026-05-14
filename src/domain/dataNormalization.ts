@@ -5,17 +5,25 @@ export function normalizePlayerName(value: string) {
   return value.trim().replace(/\s+/g, ' ')
 }
 
+const duplicatePlayerAliases: Record<string, string> = {
+  lennart: 'Lennart S.',
+  lena: 'Lena B.',
+}
+
 export function normalizePlayers(values: string[]) {
   const players: string[] = []
-  let lennartCount = 0
+  const playerCounts = new Map<string, number>()
 
   for (const value of values) {
     const normalized = normalizePlayerName(value)
     if (!normalized) continue
 
-    if (normalized.toLocaleLowerCase('de') === 'lennart') {
-      lennartCount += 1
-      players.push(lennartCount === 1 ? 'Lennart' : 'Lennart S.')
+    const playerKey = normalized.toLocaleLowerCase('de')
+    const playerCount = (playerCounts.get(playerKey) ?? 0) + 1
+    playerCounts.set(playerKey, playerCount)
+
+    if (playerCount > 1 && duplicatePlayerAliases[playerKey]) {
+      players.push(duplicatePlayerAliases[playerKey])
       continue
     }
 

@@ -39,17 +39,25 @@ function normalizeGameName(value: string) {
   return aliasMap.get(aliasKey(cleaned)) ?? cleaned
 }
 
+const duplicatePlayerAliases: Record<string, string> = {
+  lennart: 'Lennart S.',
+  lena: 'Lena B.',
+}
+
 function normalizePlayers(values: string[]) {
   const players: string[] = []
-  let lennartCount = 0
+  const playerCounts = new Map<string, number>()
 
   for (const value of values) {
     const normalized = value.trim().replace(/\s+/g, ' ')
     if (!normalized) continue
 
-    if (normalized.toLocaleLowerCase('de') === 'lennart') {
-      lennartCount += 1
-      players.push(lennartCount === 1 ? 'Lennart' : 'Lennart S.')
+    const playerKey = normalized.toLocaleLowerCase('de')
+    const playerCount = (playerCounts.get(playerKey) ?? 0) + 1
+    playerCounts.set(playerKey, playerCount)
+
+    if (playerCount > 1 && duplicatePlayerAliases[playerKey]) {
+      players.push(duplicatePlayerAliases[playerKey])
       continue
     }
 

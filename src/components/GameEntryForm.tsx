@@ -2,7 +2,7 @@ import { Check, Save, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { GameEntry, GameEntryDraft } from '../types'
-import { normalizeGameDraft } from '../domain/dataNormalization'
+import { normalizeGameDraft, normalizePlayerName } from '../domain/dataNormalization'
 import { getGameNameSuggestion } from '../domain/gameAliases'
 import { clampWins, parseNameList } from '../lib/utils'
 import { Button } from './ui/Button'
@@ -32,6 +32,21 @@ function draftFromEntry(entry?: GameEntry | null): GameEntryDraft {
   }
 }
 
+function findDuplicatePlayerName(value: string) {
+  const seen = new Set<string>()
+
+  for (const player of value.split(',')) {
+    const normalized = normalizePlayerName(player)
+    if (!normalized) continue
+
+    const key = normalized.toLocaleLowerCase('de')
+    if (seen.has(key)) return normalized
+    seen.add(key)
+  }
+
+  return null
+}
+
 type GameEntryFormProps = {
   editingEntry?: GameEntry | null
   existingGameNames: string[]
@@ -49,6 +64,7 @@ export function GameEntryForm({
   const [playersText, setPlayersText] = useState(() =>
     editingEntry?.mitspieler.join(', ') ?? '',
   )
+  const [playersError, setPlayersError] = useState<string | null>(null)
   const [ignoredSuggestion, setIgnoredSuggestion] = useState<string | null>(null)
 
   const suggestion = useMemo(() => {
@@ -63,6 +79,16 @@ export function GameEntryForm({
 
     const anzahlRunden = Math.max(1, Number(draft.anzahlRunden) || 1)
     const gewonnen = clampWins(Number(draft.gewonnen) || 0, anzahlRunden)
+    const duplicatePlayer = findDuplicatePlayerName(playersText)
+
+    if (duplicatePlayer) {
+      setPlayersError(
+        `Bitte unterscheide doppelte Namen direkt, zum Beispiel ${duplicatePlayer} B. oder ${duplicatePlayer} S.`,
+      )
+      return
+    }
+
+    setPlayersError(null)
 
     onSubmit(normalizeGameDraft({
       ...draft,
@@ -172,11 +198,17 @@ export function GameEntryForm({
             <FieldLabel htmlFor="mitspieler">Mitspieler</FieldLabel>
             <Input
               id="mitspieler"
-              onChange={(event) => setPlayersText(event.target.value)}
+              aria-invalid={playersError ? true : undefined}
+              onChange={(event) => {
+                setPlayersText(event.target.value)
+                setPlayersError(null)
+              }}
               placeholder="Nele, Lennart, Lukas"
               value={playersText}
             />
-            <FieldDescription>Namen mit Komma trennen. Doppelte Namen bleiben erhalten; ein zweiter Lennart wird als Lennart S. geführt.</FieldDescription>
+            <FieldDescription>
+              {playersError ?? 'Namen mit Komma trennen. Doppelte Namen bitte mit Kürzel unterscheiden, z. B. Lena B. oder Lennart S.'}
+            </FieldDescription>
           </Field>
 
           <Field>
