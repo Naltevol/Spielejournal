@@ -1,5 +1,5 @@
 import { sampleEntries } from '../data/sampleEntries'
-import { normalizeGameDraft } from '../domain/dataNormalization'
+import { normalizeGameDraft, normalizePlayers } from '../domain/dataNormalization'
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient'
 import type { GameEntry, GameEntryDraft } from '../types'
 
@@ -39,8 +39,15 @@ function toRow(entry: GameEntry | GameEntryDraft, userId?: string) {
   }
 }
 
-function fromRow(row: GameEntryRow): GameEntry {
+function normalizeStoredEntry(entry: GameEntry): GameEntry {
   return {
+    ...entry,
+    mitspieler: normalizePlayers(entry.mitspieler),
+  }
+}
+
+function fromRow(row: GameEntryRow): GameEntry {
+  return normalizeStoredEntry({
     id: row.id,
     userId: row.user_id ?? undefined,
     spielName: row.spiel_name,
@@ -49,21 +56,21 @@ function fromRow(row: GameEntryRow): GameEntry {
     mitspieler: row.mitspieler ?? [],
     gewonnen: row.gewonnen,
     notiz: row.notiz ?? '',
-  }
+  })
 }
 
 function readLocalEntries() {
   const stored = window.localStorage.getItem(STORAGE_KEY)
   if (!stored) {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleEntries))
-    return sampleEntries
+    return sampleEntries.map(normalizeStoredEntry)
   }
 
   try {
-    return JSON.parse(stored) as GameEntry[]
+    return (JSON.parse(stored) as GameEntry[]).map(normalizeStoredEntry)
   } catch {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleEntries))
-    return sampleEntries
+    return sampleEntries.map(normalizeStoredEntry)
   }
 }
 
