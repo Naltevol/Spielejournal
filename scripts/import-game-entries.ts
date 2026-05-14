@@ -40,12 +40,23 @@ function normalizeGameName(value: string) {
 }
 
 function normalizePlayers(values: string[]) {
-  const players = new Map<string, string>()
+  const players: string[] = []
+  let lennartCount = 0
+
   for (const value of values) {
     const normalized = value.trim().replace(/\s+/g, ' ')
-    if (normalized) players.set(normalized.toLocaleLowerCase('de'), normalized)
+    if (!normalized) continue
+
+    if (normalized.toLocaleLowerCase('de') === 'lennart') {
+      lennartCount += 1
+      players.push(lennartCount === 1 ? 'Lennart' : 'Lennart S.')
+      continue
+    }
+
+    players.push(normalized)
   }
-  return [...players.values()].sort((a, b) => a.localeCompare(b, 'de'))
+
+  return players
 }
 
 function normalizeDraft(draft: ImportDraft): ImportDraft {

@@ -6,15 +6,23 @@ export function normalizePlayerName(value: string) {
 }
 
 export function normalizePlayers(values: string[]) {
-  const players = new Map<string, string>()
+  const players: string[] = []
+  let lennartCount = 0
 
   for (const value of values) {
     const normalized = normalizePlayerName(value)
     if (!normalized) continue
-    players.set(normalized.toLocaleLowerCase('de'), normalized)
+
+    if (normalized.toLocaleLowerCase('de') === 'lennart') {
+      lennartCount += 1
+      players.push(lennartCount === 1 ? 'Lennart' : 'Lennart S.')
+      continue
+    }
+
+    players.push(normalized)
   }
 
-  return [...players.values()].sort((a, b) => a.localeCompare(b, 'de'))
+  return players
 }
 
 export function normalizeGameDraft(draft: GameEntryDraft): GameEntryDraft {

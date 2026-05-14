@@ -176,7 +176,7 @@ export function GameEntryForm({
               placeholder="Nele, Lennart, Lukas"
               value={playersText}
             />
-            <FieldDescription>Namen mit Komma trennen. Doppelte Namen werden pro Eintrag entfernt.</FieldDescription>
+            <FieldDescription>Namen mit Komma trennen. Doppelte Namen bleiben erhalten; ein zweiter Lennart wird als Lennart S. geführt.</FieldDescription>
           </Field>
 
           <Field>
