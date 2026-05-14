@@ -32,3 +32,16 @@ export type NamedCount = {
   value: number
 }
 
+
+export type DataSourceDiagnostics = {
+  isSupabaseConfigured: boolean
+  source: 'supabase' | 'localStorage'
+  rawRowCount: number | null
+  lastError: string | null
+  firstRawRow: Record<string, unknown> | null
+}
+
+export type GameEntryLoadResult = {
+  entries: GameEntry[]
+  diagnostics: DataSourceDiagnostics
+}

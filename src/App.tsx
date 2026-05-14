@@ -21,7 +21,7 @@ const initialFilters: GameFilters = {
 }
 
 function App() {
-  const { entries, error, addEntry, updateEntry, deleteEntry } = useGameEntries(true)
+  const { entries, isReady, error, diagnostics, addEntry, updateEntry, deleteEntry } = useGameEntries(true)
   const [filters, setFilters] = useState<GameFilters>(initialFilters)
   const [editingEntry, setEditingEntry] = useState<GameEntry | null>(null)
 
@@ -83,11 +83,35 @@ function App() {
           <div className="app-header__aside" aria-label="Speicherstatus">
             <Database aria-hidden="true" />
             <span>{isSupabaseConfigured ? 'Supabase Cloud öffentlich' : 'localStorage aktiv'}</span>
+            <small>{isReady ? `${entries.length} Einträge geladen` : 'Daten werden geladen...'}</small>
           </div>
         </div>
       </header>
 
       {error ? <div className="app-alert">{error}</div> : null}
+      {isReady && !error && isSupabaseConfigured && entries.length === 0 ? (
+        <div className="app-alert">
+          Supabase ist verbunden, aber die öffentliche Abfrage liefert 0 Einträge. Prüfe in Supabase die
+          anon-Select-Policy für <code>game_entries</code> und ob Vercel mit dem richtigen Projekt gebaut wurde.
+        </div>
+      ) : null}
+      {isReady && !isSupabaseConfigured ? (
+        <div className="app-alert">
+          Supabase ist in diesem Build nicht konfiguriert. Prüfe in Vercel die Production-Variablen
+          <code>VITE_SUPABASE_URL</code> und <code>VITE_SUPABASE_ANON_KEY</code> und löse danach ein Redeploy aus.
+        </div>
+      ) : null}
+
+      <section className="diagnostics-panel" aria-label="Datenlade-Diagnose">
+        <div><strong>Supabase konfiguriert:</strong> {diagnostics.isSupabaseConfigured ? 'ja' : 'nein'}</div>
+        <div><strong>Datenquelle:</strong> {diagnostics.source}</div>
+        <div><strong>Rohdatensätze aus Supabase/localStorage:</strong> {diagnostics.rawRowCount ?? 'unbekannt'}</div>
+        <div><strong>Letzter Ladefehler:</strong> {diagnostics.lastError ?? 'keiner'}</div>
+        <details>
+          <summary>Erster Rohdatensatz</summary>
+          <pre>{diagnostics.firstRawRow ? JSON.stringify(diagnostics.firstRawRow, null, 2) : 'kein Rohdatensatz geladen'}</pre>
+        </details>
+      </section>
 
       <section className="workspace">
         <div className="workspace__main">

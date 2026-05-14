@@ -114,6 +114,14 @@ svg {
   padding: 14px 16px;
 }
 
+.app-header__aside small {
+  color: var(--muted);
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
 .app-alert {
   background: rgba(251, 113, 133, 0.12);
   border: 1px solid rgba(251, 113, 133, 0.36);
@@ -130,6 +138,32 @@ svg {
   color: #bbf7d0;
   font-weight: 700;
   padding: 14px 16px;
+}
+
+.diagnostics-panel {
+  background: rgba(16, 20, 27, 0.82);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted-strong);
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+}
+
+.diagnostics-panel code,
+.diagnostics-panel pre {
+  color: var(--text);
+}
+
+.diagnostics-panel pre {
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 10px 0 0;
+  max-height: 220px;
+  overflow: auto;
+  padding: 12px;
+  white-space: pre-wrap;
 }
 
 .workspace {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { gameEntryRepository } from '../storage/gameEntryRepository'
-import type { GameEntry, GameEntryDraft } from '../types'
+import { gameEntryRepository, isSupabaseConfigured } from '../storage/gameEntryRepository'
+import type { DataSourceDiagnostics, GameEntry, GameEntryDraft } from '../types'
 
 function createId() {
   if ('crypto' in window && 'randomUUID' in window.crypto) {
@@ -10,22 +10,34 @@ function createId() {
   return String(Date.now()) + '-' + Math.random().toString(16).slice(2)
 }
 
+const initialDiagnostics: DataSourceDiagnostics = {
+  isSupabaseConfigured,
+  source: isSupabaseConfigured ? 'supabase' : 'localStorage',
+  rawRowCount: null,
+  lastError: null,
+  firstRawRow: null,
+}
+
 export function useGameEntries(isEnabled = true) {
   const [entries, setEntries] = useState<GameEntry[]>([])
   const [isReady, setIsReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [diagnostics, setDiagnostics] = useState<DataSourceDiagnostics>(initialDiagnostics)
 
   useEffect(() => {
     if (!isEnabled) return
 
     gameEntryRepository
       .list()
-      .then((loadedEntries) => {
-        setEntries(loadedEntries)
-        setError(null)
+      .then((result) => {
+        setEntries(result.entries)
+        setDiagnostics(result.diagnostics)
+        setError(result.diagnostics.lastError)
       })
       .catch((reason: unknown) => {
-        setError(reason instanceof Error ? reason.message : 'Daten konnten nicht geladen werden.')
+        const message = reason instanceof Error ? reason.message : 'Daten konnten nicht geladen werden.'
+        setError(message)
+        setDiagnostics((current) => ({ ...current, lastError: message }))
       })
       .finally(() => setIsReady(true))
   }, [isEnabled])
@@ -50,9 +62,16 @@ export function useGameEntries(isEnabled = true) {
         current.map((entry) => (entry.id === optimisticEntry.id ? savedEntry : entry)),
       )
       setError(null)
+      setDiagnostics((current) => ({
+        ...current,
+        lastError: null,
+        rawRowCount: current.rawRowCount === null ? null : current.rawRowCount + 1,
+      }))
     } catch (reason) {
       setEntries((current) => current.filter((entry) => entry.id !== optimisticEntry.id))
-      setError(reason instanceof Error ? reason.message : 'Eintrag konnte nicht gespeichert werden.')
+      const message = reason instanceof Error ? reason.message : 'Eintrag konnte nicht gespeichert werden.'
+      setError(message)
+      setDiagnostics((current) => ({ ...current, lastError: message }))
     }
   }, [])
 
@@ -69,9 +88,12 @@ export function useGameEntries(isEnabled = true) {
         current.map((entry) => (entry.id === id ? savedEntry : entry)),
       )
       setError(null)
+      setDiagnostics((current) => ({ ...current, lastError: null }))
     } catch (reason) {
       setEntries(previousEntries)
-      setError(reason instanceof Error ? reason.message : 'Eintrag konnte nicht aktualisiert werden.')
+      const message = reason instanceof Error ? reason.message : 'Eintrag konnte nicht aktualisiert werden.'
+      setError(message)
+      setDiagnostics((current) => ({ ...current, lastError: message }))
     }
   }, [entries])
 
@@ -82,9 +104,16 @@ export function useGameEntries(isEnabled = true) {
     try {
       await gameEntryRepository.delete(id)
       setError(null)
+      setDiagnostics((current) => ({
+        ...current,
+        lastError: null,
+        rawRowCount: current.rawRowCount === null ? null : Math.max(0, current.rawRowCount - 1),
+      }))
     } catch (reason) {
       setEntries(previousEntries)
-      setError(reason instanceof Error ? reason.message : 'Eintrag konnte nicht gelöscht werden.')
+      const message = reason instanceof Error ? reason.message : 'Eintrag konnte nicht gelöscht werden.'
+      setError(message)
+      setDiagnostics((current) => ({ ...current, lastError: message }))
     }
   }, [entries])
 
@@ -92,9 +121,9 @@ export function useGameEntries(isEnabled = true) {
     entries: sortedEntries,
     isReady,
     error,
+    diagnostics,
     addEntry,
     updateEntry,
     deleteEntry,
   }
 }
-

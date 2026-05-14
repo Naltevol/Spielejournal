@@ -1,35 +1,88 @@
 import { sampleEntries } from '../data/sampleEntries'
-import { normalizeGameDraft, normalizePlayers } from '../domain/dataNormalization'
+import { normalizeGameDraft, normalizePlayerName, normalizePlayers } from '../domain/dataNormalization'
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient'
-import type { GameEntry, GameEntryDraft } from '../types'
+import type { DataSourceDiagnostics, GameEntry, GameEntryDraft, GameEntryLoadResult } from '../types'
 
 const STORAGE_KEY = 'boardgame-journal.entries.v1'
 const TABLE_NAME = 'game_entries'
 
-type GameEntryRow = {
-  id: string
-  user_id: string | null
-  spiel_name: string
-  datum: string
-  anzahl_runden: number
-  mitspieler: string[]
-  gewonnen: number
-  notiz: string | null
-  created_at?: string
-}
+const GAME_ENTRY_COLUMNS = [
+  'id',
+  'user_id',
+  'spiel_name',
+  'datum',
+  'anzahl_runden',
+  'mitspieler',
+  'gewonnen',
+  'notiz',
+  'created_at',
+  'updated_at',
+  'import_key',
+].join(',')
+
+type GameEntryRow = Record<string, unknown>
 
 export interface GameEntryRepository {
-  list(): Promise<GameEntry[]>
+  list(): Promise<GameEntryLoadResult>
   create(entry: GameEntry): Promise<GameEntry>
   update(id: string, draft: GameEntryDraft): Promise<GameEntry>
   delete(id: string): Promise<void>
 }
 
-function toRow(entry: GameEntry | GameEntryDraft, userId?: string) {
+function createDiagnostics(
+  source: DataSourceDiagnostics['source'],
+  values: Partial<DataSourceDiagnostics> = {},
+): DataSourceDiagnostics {
+  return {
+    isSupabaseConfigured,
+    source,
+    rawRowCount: null,
+    lastError: null,
+    firstRawRow: null,
+    ...values,
+  }
+}
+
+function getString(row: GameEntryRow, ...keys: string[]) {
+  for (const key of keys) {
+    const value = row[key]
+    if (typeof value === 'string') return value
+    if (typeof value === 'number') return String(value)
+  }
+
+  return ''
+}
+
+function getNumber(row: GameEntryRow, ...keys: string[]) {
+  for (const key of keys) {
+    const value = row[key]
+    if (typeof value === 'number' && Number.isFinite(value)) return value
+    if (typeof value === 'string') {
+      const parsed = Number(value)
+      if (Number.isFinite(parsed)) return parsed
+    }
+  }
+
+  return 0
+}
+
+function getPlayers(row: GameEntryRow) {
+  const value = row.mitspieler ?? row.players
+  if (Array.isArray(value)) {
+    return value.map((player) => normalizePlayerName(String(player))).filter(Boolean)
+  }
+
+  if (typeof value === 'string') {
+    return value.split(',').map((player) => normalizePlayerName(player)).filter(Boolean)
+  }
+
+  return []
+}
+
+function toRow(entry: GameEntry | GameEntryDraft) {
   const normalized = normalizeGameDraft(entry)
 
   return {
-    ...(userId ? { user_id: userId } : {}),
     spiel_name: normalized.spielName,
     datum: normalized.datum,
     anzahl_runden: normalized.anzahlRunden,
@@ -42,20 +95,22 @@ function toRow(entry: GameEntry | GameEntryDraft, userId?: string) {
 function normalizeStoredEntry(entry: GameEntry): GameEntry {
   return {
     ...entry,
+    anzahlRunden: Math.max(1, Number(entry.anzahlRunden) || 1),
+    gewonnen: Math.max(0, Number(entry.gewonnen) || 0),
     mitspieler: normalizePlayers(entry.mitspieler),
   }
 }
 
 function fromRow(row: GameEntryRow): GameEntry {
   return normalizeStoredEntry({
-    id: row.id,
-    userId: row.user_id ?? undefined,
-    spielName: row.spiel_name,
-    datum: row.datum,
-    anzahlRunden: row.anzahl_runden,
-    mitspieler: row.mitspieler ?? [],
-    gewonnen: row.gewonnen,
-    notiz: row.notiz ?? '',
+    id: getString(row, 'id'),
+    userId: getString(row, 'user_id') || undefined,
+    spielName: getString(row, 'spiel_name', 'spielName', 'game'),
+    datum: getString(row, 'datum', 'date'),
+    anzahlRunden: getNumber(row, 'anzahl_runden', 'anzahlRunden', 'rounds'),
+    mitspieler: getPlayers(row),
+    gewonnen: getNumber(row, 'gewonnen', 'wins'),
+    notiz: getString(row, 'notiz', 'note'),
   })
 }
 
@@ -78,10 +133,16 @@ function writeLocalEntries(entries: GameEntry[]) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries))
 }
 
-
 export class LocalStorageGameEntryRepository implements GameEntryRepository {
   async list() {
-    return readLocalEntries()
+    const entries = readLocalEntries()
+    return {
+      entries,
+      diagnostics: createDiagnostics('localStorage', {
+        rawRowCount: entries.length,
+        firstRawRow: entries[0] ? { ...entries[0] } : null,
+      }),
+    }
   }
 
   async create(entry: GameEntry) {
@@ -107,17 +168,40 @@ export class LocalStorageGameEntryRepository implements GameEntryRepository {
 
 export class SupabaseGameEntryRepository implements GameEntryRepository {
   async list() {
-    if (!supabase) return []
+    if (!supabase) {
+      return {
+        entries: [],
+        diagnostics: createDiagnostics('supabase', {
+          lastError: 'Supabase ist nicht konfiguriert.',
+        }),
+      }
+    }
 
-    const { data, error } = await supabase
+    const { data, error, count } = await supabase
       .from(TABLE_NAME)
-      .select('*')
+      .select(GAME_ENTRY_COLUMNS, { count: 'exact' })
       .order('datum', { ascending: false })
       .order('spiel_name', { ascending: true })
 
-    if (error) throw error
+    if (error) {
+      return {
+        entries: [],
+        diagnostics: createDiagnostics('supabase', {
+          rawRowCount: count ?? 0,
+          lastError: error.message,
+        }),
+      }
+    }
 
-    return (data ?? []).map((row) => fromRow(row as GameEntryRow))
+    const rows = (data ?? []) as unknown as GameEntryRow[]
+
+    return {
+      entries: rows.map(fromRow),
+      diagnostics: createDiagnostics('supabase', {
+        rawRowCount: count ?? rows.length,
+        firstRawRow: rows[0] ?? null,
+      }),
+    }
   }
 
   async create(entry: GameEntry) {
@@ -126,12 +210,12 @@ export class SupabaseGameEntryRepository implements GameEntryRepository {
     const { data, error } = await supabase
       .from(TABLE_NAME)
       .insert({ ...toRow(entry), id: entry.id })
-      .select()
+      .select(GAME_ENTRY_COLUMNS)
       .single()
 
     if (error) throw error
 
-    return fromRow(data as GameEntryRow)
+    return fromRow(data as unknown as GameEntryRow)
   }
 
   async update(id: string, draft: GameEntryDraft) {
@@ -141,12 +225,12 @@ export class SupabaseGameEntryRepository implements GameEntryRepository {
       .from(TABLE_NAME)
       .update(toRow(draft))
       .eq('id', id)
-      .select()
+      .select(GAME_ENTRY_COLUMNS)
       .single()
 
     if (error) throw error
 
-    return fromRow(data as GameEntryRow)
+    return fromRow(data as unknown as GameEntryRow)
   }
 
   async delete(id: string) {
@@ -164,4 +248,3 @@ function createRepository() {
 
 export const gameEntryRepository = createRepository()
 export { isSupabaseConfigured }
-
