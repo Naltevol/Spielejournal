@@ -40,6 +40,10 @@ Die App nutzt Supabase automatisch, sobald `VITE_SUPABASE_URL` und `VITE_SUPABAS
 
 ## Nutzer in Supabase anlegen
 
+Du kannst den App-Nutzer direkt in der Spielejournal-Anmeldemaske erstellen. Klicke dort auf `Eigenes App-Konto erstellen`, trage eine E-Mail-Adresse und ein Passwort ein und bestätige anschließend bei Bedarf die Supabase-E-Mail. Für bestehende Nutzer ohne Passwort kann die App außerdem einen passwortlosen Login-Link per E-Mail senden.
+
+Alternativ kannst du den Nutzer im Supabase-Dashboard anlegen:
+
 1. Öffne Supabase.
 2. Gehe zu `Authentication` > `Users`.
 3. Klicke `Add user` > `Create new user`.
@@ -47,6 +51,8 @@ Die App nutzt Supabase automatisch, sobald `VITE_SUPABASE_URL` und `VITE_SUPABAS
 5. Vergib ein Passwort.
 6. Setze optional `Auto Confirm User`, damit du dich sofort einloggen kannst.
 7. Melde dich in der App mit dieser E-Mail und diesem Passwort an.
+
+Der Login ins Supabase-Dashboard, zum Beispiel mit GitHub, ist getrennt vom App-Login.
 
 Die Tabelle `game_entries` besitzt eine `user_id`. Row Level Security ist aktiv und erlaubt nur angemeldeten Nutzern Zugriff auf eigene Zeilen:
 

@@ -1,24 +1,52 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { LockKeyhole } from 'lucide-react'
+import { LockKeyhole, UserPlus } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card'
-import { Field, FieldGroup, FieldLabel } from '../ui/Field'
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '../ui/Field'
 import { Input } from '../ui/FormControls'
+
+type AuthResult = {
+  message?: string
+}
 
 type LoginPageProps = {
   error: string | null
   isLoading: boolean
-  onSignIn: (email: string, password: string) => Promise<void>
+  onSignIn: (email: string, password: string) => Promise<AuthResult>
+  onSignUp: (email: string, password: string) => Promise<AuthResult>
+  onSendMagicLink: (email: string) => Promise<AuthResult>
 }
 
-export function LoginPage({ error, isLoading, onSignIn }: LoginPageProps) {
+export function LoginPage({
+  error,
+  isLoading,
+  onSignIn,
+  onSignUp,
+  onSendMagicLink,
+}: LoginPageProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in')
+  const [message, setMessage] = useState<string | null>(null)
+
+  const isSignUp = mode === 'sign-up'
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    await onSignIn(email, password)
+    setMessage(null)
+
+    const result = isSignUp
+      ? await onSignUp(email.trim(), password)
+      : await onSignIn(email.trim(), password)
+
+    setMessage(result.message ?? null)
+  }
+
+  async function handleMagicLink() {
+    setMessage(null)
+    const result = await onSendMagicLink(email.trim())
+    setMessage(result.message ?? null)
   }
 
   return (
@@ -26,10 +54,14 @@ export function LoginPage({ error, isLoading, onSignIn }: LoginPageProps) {
       <Card className="login-card">
         <CardHeader>
           <div className="login-card__icon">
-            <LockKeyhole aria-hidden="true" />
+            {isSignUp ? <UserPlus aria-hidden="true" /> : <LockKeyhole aria-hidden="true" />}
           </div>
-          <CardTitle>Spielejournal anmelden</CardTitle>
-          <CardDescription>Bitte melde dich mit deinem Supabase-Nutzer an.</CardDescription>
+          <CardTitle>{isSignUp ? 'App-Konto erstellen' : 'Spielejournal anmelden'}</CardTitle>
+          <CardDescription>
+            {isSignUp
+              ? 'Lege einen eigenen App-Login mit E-Mail und Passwort an.'
+              : 'Melde dich mit deinem Spielejournal-App-Konto an.'}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form className="entry-form" onSubmit={handleSubmit}>
@@ -44,12 +76,16 @@ export function LoginPage({ error, isLoading, onSignIn }: LoginPageProps) {
                   type="email"
                   value={email}
                 />
+                <FieldDescription>
+                  Dein GitHub-Login für das Supabase-Dashboard ist davon getrennt.
+                </FieldDescription>
               </Field>
               <Field>
                 <FieldLabel htmlFor="password">Passwort</FieldLabel>
                 <Input
-                  autoComplete="current-password"
+                  autoComplete={isSignUp ? 'new-password' : 'current-password'}
                   id="password"
+                  minLength={6}
                   onChange={(event) => setPassword(event.target.value)}
                   required
                   type="password"
@@ -58,8 +94,30 @@ export function LoginPage({ error, isLoading, onSignIn }: LoginPageProps) {
               </Field>
             </FieldGroup>
             {error ? <div className="app-alert">{error}</div> : null}
+            {message ? <div className="app-notice">{message}</div> : null}
             <Button disabled={isLoading} type="submit">
-              {isLoading ? 'Anmeldung läuft...' : 'Anmelden'}
+              {isLoading ? 'Bitte warten...' : isSignUp ? 'Konto erstellen' : 'Anmelden'}
+            </Button>
+            {!isSignUp ? (
+              <Button
+                disabled={isLoading || !email.trim()}
+                onClick={handleMagicLink}
+                type="button"
+                variant="secondary"
+              >
+                Login-Link per E-Mail senden
+              </Button>
+            ) : null}
+            <Button
+              disabled={isLoading}
+              onClick={() => {
+                setMode(isSignUp ? 'sign-in' : 'sign-up')
+                setMessage(null)
+              }}
+              type="button"
+              variant="ghost"
+            >
+              {isSignUp ? 'Ich habe schon ein Konto' : 'Eigenes App-Konto erstellen'}
             </Button>
           </form>
         </CardContent>
@@ -67,4 +125,3 @@ export function LoginPage({ error, isLoading, onSignIn }: LoginPageProps) {
     </main>
   )
 }
-

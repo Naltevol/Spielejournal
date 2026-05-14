@@ -76,7 +76,13 @@ function App() {
   }
 
   if (isSupabaseConfigured && !auth.session) {
-    return <LoginPage error={auth.error} isLoading={auth.isLoading} onSignIn={auth.signIn} />
+    return <LoginPage
+      error={auth.error}
+      isLoading={auth.isLoading}
+      onSignIn={auth.signIn}
+      onSignUp={auth.signUp}
+      onSendMagicLink={auth.sendMagicLink}
+    />
   }
 
   return (

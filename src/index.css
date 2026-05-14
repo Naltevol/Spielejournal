@@ -123,6 +123,15 @@ svg {
   padding: 14px 16px;
 }
 
+.app-notice {
+  background: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.32);
+  border-radius: 8px;
+  color: #bbf7d0;
+  font-weight: 700;
+  padding: 14px 16px;
+}
+
 .workspace {
   align-items: start;
   display: grid;
