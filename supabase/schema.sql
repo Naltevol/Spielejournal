@@ -43,7 +43,6 @@ for each row
 execute function public.set_updated_at();
 
 alter table public.game_entries enable row level security;
-alter table public.game_entries force row level security;
 
 drop policy if exists "game_entries_select_public" on public.game_entries;
 drop policy if exists "game_entries_insert_public" on public.game_entries;
@@ -54,31 +53,30 @@ drop policy if exists "game_entries_insert_own" on public.game_entries;
 drop policy if exists "game_entries_update_own" on public.game_entries;
 drop policy if exists "game_entries_delete_own" on public.game_entries;
 
-create policy "game_entries_select_own"
+create policy "game_entries_select_public"
 on public.game_entries
 for select
-to authenticated
-using (user_id = auth.uid());
+to anon, authenticated
+using (true);
 
-create policy "game_entries_insert_own"
+create policy "game_entries_insert_public"
 on public.game_entries
 for insert
-to authenticated
-with check (user_id = auth.uid());
+to anon, authenticated
+with check (true);
 
-create policy "game_entries_update_own"
+create policy "game_entries_update_public"
 on public.game_entries
 for update
-to authenticated
-using (user_id = auth.uid())
-with check (user_id = auth.uid());
+to anon, authenticated
+using (true)
+with check (true);
 
-create policy "game_entries_delete_own"
+create policy "game_entries_delete_public"
 on public.game_entries
 for delete
-to authenticated
-using (user_id = auth.uid());
+to anon, authenticated
+using (true);
 
--- Optional nach dem Bereinigen/Importieren ausführen, wenn keine alten Zeilen ohne Nutzer mehr existieren:
--- alter table public.game_entries alter column user_id set not null;
+-- Die App ist aktuell öffentlich: anon und authenticated dürfen alle Einträge lesen, erstellen, bearbeiten und löschen.
 

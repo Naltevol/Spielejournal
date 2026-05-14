@@ -1,10 +1,10 @@
 # Spielejournal
 
-Moderne React/TypeScript-App zum Erfassen und Auswerten gespielter Gesellschaftsspiele. Die Cloud-Version nutzt Supabase Auth und Row Level Security, damit nur angemeldete Nutzer ihre eigenen Einträge sehen.
+Moderne React/TypeScript-App zum Erfassen und Auswerten gespielter Gesellschaftsspiele. Die Cloud-Version nutzt aktuell öffentliche Supabase-Policies, damit die App ohne Login nutzbar ist.
 
 ## Funktionen
 
-- Login mit Supabase Auth
+- Öffentliche Supabase-Nutzung ohne Login
 - Einträge hinzufügen, bearbeiten und löschen
 - Tabelle mit Suche und Filtern nach Jahr, Monat, Mitspieler und Gewinnstatus
 - Dashboard-Kennzahlen für gespielte Runden, unterschiedliche Spiele, Top-Spiel, Top-Mitspieler und Gewinnquote
@@ -36,32 +36,18 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Die App nutzt Supabase automatisch, sobald `VITE_SUPABASE_URL` und `VITE_SUPABASE_ANON_KEY` gesetzt sind. Ohne diese Werte fällt sie auf `localStorage` zurück.
+Die App nutzt Supabase automatisch öffentlich, sobald `VITE_SUPABASE_URL` und `VITE_SUPABASE_ANON_KEY` gesetzt sind. Ohne diese Werte fällt sie auf `localStorage` zurück.
 
-## Nutzer in Supabase anlegen
+## Öffentliche Supabase-Nutzung
 
-Du kannst den App-Nutzer direkt in der Spielejournal-Anmeldemaske erstellen. Klicke dort auf `Eigenes App-Konto erstellen`, trage eine E-Mail-Adresse und ein Passwort ein und bestätige anschließend bei Bedarf die Supabase-E-Mail. Die App kann außerdem einen passwortlosen Login-Link per E-Mail senden; falls noch kein App-Konto existiert, wird es dabei angelegt.
+Die App ist aktuell ohne Login nutzbar. Dafür erlaubt `supabase/schema.sql` öffentlichen Zugriff über den anon key auf `game_entries`:
 
-Alternativ kannst du den Nutzer im Supabase-Dashboard anlegen:
+- Lesen: alle Einträge
+- Erstellen: alle Einträge
+- Bearbeiten: alle Einträge
+- Löschen: alle Einträge
 
-1. Öffne Supabase.
-2. Gehe zu `Authentication` > `Users`.
-3. Klicke `Add user` > `Create new user`.
-4. Trage deine E-Mail-Adresse ein.
-5. Vergib ein Passwort.
-6. Setze optional `Auto Confirm User`, damit du dich sofort einloggen kannst.
-7. Melde dich in der App mit dieser E-Mail und diesem Passwort an.
-
-Der Login ins Supabase-Dashboard, zum Beispiel mit GitHub, ist getrennt vom App-Login.
-
-Die Tabelle `game_entries` besitzt eine `user_id`. Row Level Security ist aktiv und erlaubt nur angemeldeten Nutzern Zugriff auf eigene Zeilen:
-
-- Lesen: `user_id = auth.uid()`
-- Erstellen: `user_id = auth.uid()`
-- Bearbeiten: `user_id = auth.uid()`
-- Löschen: `user_id = auth.uid()`
-
-Die früheren öffentlichen anon-Policies werden in `supabase/schema.sql` entfernt.
+Das ist bewusst einfach für den privaten Spielejournal-Betrieb, aber nicht als Schutz für öffentliche, sensible Daten gedacht.
 
 ## Beispieldaten in Supabase löschen
 
@@ -171,4 +157,4 @@ Nicht committen:
 - `dist`
 - `scripts-dist`
 
-Keine Supabase Secret Keys verwenden. Die App und das Importskript nutzen den anon public key plus Supabase Auth Login.
+Keine Supabase Secret Keys verwenden. Die App und das Importskript nutzen den anon public key.

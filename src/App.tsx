@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react'
-import { BarChart3, Database, Dice5, LogOut } from 'lucide-react'
+import { BarChart3, Database, Dice5 } from 'lucide-react'
 import './index.css'
 import { buildCounts, filterEntries, getMonths, getPlayers, getYears, summarizeEntries } from './lib/analytics'
 import { exportEntriesAsCsv } from './lib/csv'
 import { useGameEntries } from './hooks/useGameEntries'
-import { useAuth } from './hooks/useAuth'
 import { isSupabaseConfigured } from './storage/gameEntryRepository'
 import type { GameEntry, GameEntryDraft, GameFilters } from './types'
 import { ChartsPanel } from './components/ChartsPanel'
@@ -12,8 +11,6 @@ import { DashboardCards } from './components/DashboardCards'
 import { GameEntryForm } from './components/GameEntryForm'
 import { GameFiltersBar } from './components/GameFiltersBar'
 import { GameTable } from './components/GameTable'
-import { LoginPage } from './components/auth/LoginPage'
-import { Button } from './components/ui/Button'
 
 const initialFilters: GameFilters = {
   suche: '',
@@ -24,9 +21,7 @@ const initialFilters: GameFilters = {
 }
 
 function App() {
-  const auth = useAuth()
-  const canUseCloudData = !isSupabaseConfigured || Boolean(auth.session)
-  const { entries, error, addEntry, updateEntry, deleteEntry } = useGameEntries(canUseCloudData)
+  const { entries, error, addEntry, updateEntry, deleteEntry } = useGameEntries(true)
   const [filters, setFilters] = useState<GameFilters>(initialFilters)
   const [editingEntry, setEditingEntry] = useState<GameEntry | null>(null)
 
@@ -71,20 +66,6 @@ function App() {
     addEntry(draft)
   }
 
-  if (isSupabaseConfigured && auth.isLoading) {
-    return <main className="login-shell">Anmeldung wird geprüft...</main>
-  }
-
-  if (isSupabaseConfigured && !auth.session) {
-    return <LoginPage
-      error={auth.error}
-      isLoading={auth.isLoading}
-      onSignIn={auth.signIn}
-      onSignUp={auth.signUp}
-      onSendMagicLink={auth.sendMagicLink}
-    />
-  }
-
   return (
     <main className="app-shell">
       <header className="app-header">
@@ -95,21 +76,14 @@ function App() {
           </div>
           <h1>Gesellschaftsspiele dokumentieren und auswerten</h1>
           <p>
-            Schnelle Erfassung, bereinigte Spielnamen und geschützte Cloud-Daten mit
-            Supabase Auth.
+            Schnelle Erfassung, bereinigte Spielnamen und gemeinsame Cloud-Daten.
           </p>
         </div>
         <div className="app-header__actions">
           <div className="app-header__aside" aria-label="Speicherstatus">
             <Database aria-hidden="true" />
-            <span>{isSupabaseConfigured ? 'Supabase Cloud geschützt' : 'localStorage aktiv'}</span>
+            <span>{isSupabaseConfigured ? 'Supabase Cloud öffentlich' : 'localStorage aktiv'}</span>
           </div>
-          {isSupabaseConfigured ? (
-            <Button onClick={auth.signOut} variant="secondary">
-              <LogOut data-icon="inline-start" />
-              Abmelden
-            </Button>
-          ) : null}
         </div>
       </header>
 

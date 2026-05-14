@@ -78,15 +78,6 @@ function writeLocalEntries(entries: GameEntry[]) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries))
 }
 
-async function getAuthenticatedUserId() {
-  if (!supabase) throw new Error('Supabase ist nicht konfiguriert.')
-
-  const { data, error } = await supabase.auth.getUser()
-  if (error) throw error
-  if (!data.user) throw new Error('Bitte melde dich erneut an.')
-
-  return data.user.id
-}
 
 export class LocalStorageGameEntryRepository implements GameEntryRepository {
   async list() {
@@ -132,10 +123,9 @@ export class SupabaseGameEntryRepository implements GameEntryRepository {
   async create(entry: GameEntry) {
     if (!supabase) throw new Error('Supabase ist nicht konfiguriert.')
 
-    const userId = await getAuthenticatedUserId()
     const { data, error } = await supabase
       .from(TABLE_NAME)
-      .insert({ ...toRow(entry, userId), id: entry.id })
+      .insert({ ...toRow(entry), id: entry.id })
       .select()
       .single()
 

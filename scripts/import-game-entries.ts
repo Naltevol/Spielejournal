@@ -135,11 +135,15 @@ function parseCsv(filePath: string): CsvRow[] {
   })
 }
 
+function normalizeDate(value: string) {
+  return value.trim().replace(/\./g, '-')
+}
+
 function rowToDraft(row: CsvRow): ImportDraft {
   return normalizeDraft({
-    spielName: row.spielName,
-    datum: row.datum,
-    anzahlRunden: Number(row.anzahlRunden),
+    spielName: row.spielName || row.spiel_name,
+    datum: normalizeDate(row.datum),
+    anzahlRunden: Number(row.anzahlRunden || row.anzahl_runden),
     mitspieler: row.mitspieler.split(',').map((player) => player.trim()),
     gewonnen: Number(row.gewonnen),
     notiz: row.notiz,
@@ -150,19 +154,12 @@ async function main() {
   loadEnvFile(resolve('.env.local'))
   const url = process.env.VITE_SUPABASE_URL
   const anonKey = process.env.VITE_SUPABASE_ANON_KEY
-  const email = process.env.SUPABASE_IMPORT_EMAIL
-  const password = process.env.SUPABASE_IMPORT_PASSWORD
   const csvPath = process.argv[2] ?? 'data/import/spielejournal-2026.csv'
   if (!url || !anonKey) throw new Error('VITE_SUPABASE_URL und VITE_SUPABASE_ANON_KEY fehlen.')
-  if (!email || !password) throw new Error('SUPABASE_IMPORT_EMAIL und SUPABASE_IMPORT_PASSWORD fehlen.')
 
   const supabase = createClient(url, anonKey)
-  const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-  if (signInError) throw signInError
-  if (!signInData.user) throw new Error('Import-Nutzer konnte nicht angemeldet werden.')
 
   const rows = parseCsv(csvPath).map(rowToDraft).map((draft) => ({
-    user_id: signInData.user.id,
     spiel_name: draft.spielName,
     datum: draft.datum,
     anzahl_runden: draft.anzahlRunden,
@@ -172,12 +169,22 @@ async function main() {
     import_key: createDuplicateKey(draft),
   }))
 
-  const { data, error } = await supabase
+  const importKeys = rows.map((row) => row.import_key)
+  const { data: existingRows, error: existingError } = await supabase
     .from('game_entries')
-    .upsert(rows, { onConflict: 'user_id,import_key', ignoreDuplicates: true })
-    .select('id')
-  if (error) throw error
-  console.log('Import abgeschlossen. Neue Einträge: ' + (data?.length ?? 0) + '. Bereits vorhandene Duplikate wurden übersprungen.')
+    .select('import_key')
+    .in('import_key', importKeys)
+  if (existingError) throw existingError
+
+  const existingKeys = new Set((existingRows ?? []).map((row) => row.import_key))
+  const newRows = rows.filter((row) => !existingKeys.has(row.import_key))
+
+  if (newRows.length > 0) {
+    const { error } = await supabase.from('game_entries').insert(newRows)
+    if (error) throw error
+  }
+
+  console.log('Import abgeschlossen. Neue Einträge: ' + newRows.length + '. Bereits vorhandene Duplikate wurden übersprungen.')
 }
 
 main().catch((error: unknown) => {
