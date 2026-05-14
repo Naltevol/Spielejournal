@@ -7,14 +7,22 @@ import { Input, Select } from './ui/FormControls'
 type GameFiltersBarProps = {
   filters: GameFilters
   years: string[]
+  months: string[]
   players: string[]
   onFiltersChange: (filters: GameFilters) => void
   onExport: () => void
 }
 
+const monthNames = new Intl.DateTimeFormat('de-DE', { month: 'long' })
+
+function formatMonth(month: string) {
+  return monthNames.format(new Date('2026-' + month + '-01T12:00:00'))
+}
+
 export function GameFiltersBar({
   filters,
   years,
+  months,
   players,
   onFiltersChange,
   onExport,
@@ -40,13 +48,29 @@ export function GameFiltersBar({
         <FieldLabel htmlFor="jahr">Jahr</FieldLabel>
         <Select
           id="jahr"
-          onChange={(event) => onFiltersChange({ ...filters, jahr: event.target.value })}
+          onChange={(event) => onFiltersChange({ ...filters, jahr: event.target.value, monat: 'alle' })}
           value={filters.jahr}
         >
           <option value="alle">Alle Jahre</option>
           {years.map((year) => (
             <option key={year} value={year}>
               {year}
+            </option>
+          ))}
+        </Select>
+      </Field>
+
+      <Field>
+        <FieldLabel htmlFor="monat">Monat</FieldLabel>
+        <Select
+          id="monat"
+          onChange={(event) => onFiltersChange({ ...filters, monat: event.target.value })}
+          value={filters.monat}
+        >
+          <option value="alle">Alle Monate</option>
+          {months.map((month) => (
+            <option key={month} value={month}>
+              {formatMonth(month)}
             </option>
           ))}
         </Select>
@@ -95,3 +119,4 @@ export function GameFiltersBar({
     </div>
   )
 }
+

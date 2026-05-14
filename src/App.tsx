@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
-import { BarChart3, Database, Dice5 } from 'lucide-react'
+import { BarChart3, Database, Dice5, LogOut } from 'lucide-react'
 import './index.css'
-import { buildCounts, filterEntries, getPlayers, getYears, summarizeEntries } from './lib/analytics'
+import { buildCounts, filterEntries, getMonths, getPlayers, getYears, summarizeEntries } from './lib/analytics'
 import { exportEntriesAsCsv } from './lib/csv'
 import { useGameEntries } from './hooks/useGameEntries'
+import { useAuth } from './hooks/useAuth'
 import { isSupabaseConfigured } from './storage/gameEntryRepository'
 import type { GameEntry, GameEntryDraft, GameFilters } from './types'
 import { ChartsPanel } from './components/ChartsPanel'
@@ -11,31 +12,37 @@ import { DashboardCards } from './components/DashboardCards'
 import { GameEntryForm } from './components/GameEntryForm'
 import { GameFiltersBar } from './components/GameFiltersBar'
 import { GameTable } from './components/GameTable'
+import { LoginPage } from './components/auth/LoginPage'
+import { Button } from './components/ui/Button'
 
 const initialFilters: GameFilters = {
   suche: '',
   jahr: 'alle',
+  monat: 'alle',
   mitspieler: 'alle',
   gewinnstatus: 'alle',
 }
 
 function App() {
-  const { entries, error, addEntry, updateEntry, deleteEntry } = useGameEntries()
+  const auth = useAuth()
+  const canUseCloudData = !isSupabaseConfigured || Boolean(auth.session)
+  const { entries, error, addEntry, updateEntry, deleteEntry } = useGameEntries(canUseCloudData)
   const [filters, setFilters] = useState<GameFilters>(initialFilters)
   const [editingEntry, setEditingEntry] = useState<GameEntry | null>(null)
 
   const years = useMemo(() => getYears(entries), [entries])
+  const months = useMemo(() => getMonths(entries, filters.jahr), [entries, filters.jahr])
   const players = useMemo(() => getPlayers(entries), [entries])
+  const gameNames = useMemo(() => [...new Set(entries.map((entry) => entry.spielName))], [entries])
 
   const filteredTableEntries = useMemo(() => {
     const search = filters.suche.trim().toLocaleLowerCase('de')
 
-    return entries.filter((entry) => {
+    return filterEntries(entries, filters.jahr, filters.monat).filter((entry) => {
       const matchesSearch =
         !search ||
         entry.spielName.toLocaleLowerCase('de').includes(search) ||
         entry.notiz?.toLocaleLowerCase('de').includes(search)
-      const matchesYear = filters.jahr === 'alle' || entry.datum.startsWith(filters.jahr)
       const matchesPlayer =
         filters.mitspieler === 'alle' || entry.mitspieler.includes(filters.mitspieler)
       const matchesStatus =
@@ -43,13 +50,13 @@ function App() {
         (filters.gewinnstatus === 'gewonnen' && entry.gewonnen > 0) ||
         (filters.gewinnstatus === 'verloren' && entry.gewonnen === 0)
 
-      return matchesSearch && matchesYear && matchesPlayer && matchesStatus
+      return matchesSearch && matchesPlayer && matchesStatus
     })
   }, [entries, filters])
 
   const dashboardEntries = useMemo(
-    () => filterEntries(entries, filters.jahr),
-    [entries, filters.jahr],
+    () => filterEntries(entries, filters.jahr, filters.monat),
+    [entries, filters.jahr, filters.monat],
   )
   const summary = useMemo(() => summarizeEntries(dashboardEntries), [dashboardEntries])
   const counts = useMemo(() => buildCounts(dashboardEntries), [dashboardEntries])
@@ -64,6 +71,14 @@ function App() {
     addEntry(draft)
   }
 
+  if (isSupabaseConfigured && auth.isLoading) {
+    return <main className="login-shell">Anmeldung wird geprüft...</main>
+  }
+
+  if (isSupabaseConfigured && !auth.session) {
+    return <LoginPage error={auth.error} isLoading={auth.isLoading} onSignIn={auth.signIn} />
+  }
+
   return (
     <main className="app-shell">
       <header className="app-header">
@@ -74,13 +89,21 @@ function App() {
           </div>
           <h1>Gesellschaftsspiele dokumentieren und auswerten</h1>
           <p>
-            Schnelle Erfassung, Notizen-App-ähnliche Tabelle und laufend aktuelle
-            Jahresauswertungen mit Diagrammen.
+            Schnelle Erfassung, bereinigte Spielnamen und geschützte Cloud-Daten mit
+            Supabase Auth.
           </p>
         </div>
-        <div className="app-header__aside" aria-label="Lokale Speicherung">
-          <Database aria-hidden="true" />
-          <span>{isSupabaseConfigured ? 'Supabase Cloud aktiv' : 'localStorage aktiv'}</span>
+        <div className="app-header__actions">
+          <div className="app-header__aside" aria-label="Speicherstatus">
+            <Database aria-hidden="true" />
+            <span>{isSupabaseConfigured ? 'Supabase Cloud geschützt' : 'localStorage aktiv'}</span>
+          </div>
+          {isSupabaseConfigured ? (
+            <Button onClick={auth.signOut} variant="secondary">
+              <LogOut data-icon="inline-start" />
+              Abmelden
+            </Button>
+          ) : null}
         </div>
       </header>
 
@@ -92,7 +115,7 @@ function App() {
             <BarChart3 aria-hidden="true" />
             <div>
               <h2>Dashboard</h2>
-              <p>Alle Kennzahlen reagieren auf den Jahresfilter.</p>
+              <p>Alle Kennzahlen reagieren auf Jahr und Monat.</p>
             </div>
           </div>
           <DashboardCards summary={summary} />
@@ -102,6 +125,7 @@ function App() {
         <aside className="workspace__side">
           <GameEntryForm
             editingEntry={editingEntry}
+            existingGameNames={gameNames}
             key={editingEntry?.id ?? 'new-entry'}
             onCancelEdit={() => setEditingEntry(null)}
             onSubmit={handleSubmit}
@@ -112,6 +136,7 @@ function App() {
       <section className="table-section">
         <GameFiltersBar
           filters={filters}
+          months={months}
           onExport={() => exportEntriesAsCsv(filteredTableEntries)}
           onFiltersChange={setFilters}
           players={players}
@@ -128,3 +153,4 @@ function App() {
 }
 
 export default App
+

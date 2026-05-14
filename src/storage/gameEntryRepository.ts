@@ -1,5 +1,6 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { sampleEntries } from '../data/sampleEntries'
+import { normalizeGameDraft } from '../domain/dataNormalization'
+import { supabase, isSupabaseConfigured } from '../lib/supabaseClient'
 import type { GameEntry, GameEntryDraft } from '../types'
 
 const STORAGE_KEY = 'boardgame-journal.entries.v1'
@@ -7,6 +8,7 @@ const TABLE_NAME = 'game_entries'
 
 type GameEntryRow = {
   id: string
+  user_id: string | null
   spiel_name: string
   datum: string
   anzahl_runden: number
@@ -23,20 +25,24 @@ export interface GameEntryRepository {
   delete(id: string): Promise<void>
 }
 
-function toRow(entry: GameEntry | GameEntryDraft): Omit<GameEntryRow, 'id'> {
+function toRow(entry: GameEntry | GameEntryDraft, userId?: string) {
+  const normalized = normalizeGameDraft(entry)
+
   return {
-    spiel_name: entry.spielName,
-    datum: entry.datum,
-    anzahl_runden: entry.anzahlRunden,
-    mitspieler: entry.mitspieler,
-    gewonnen: entry.gewonnen,
-    notiz: entry.notiz || null,
+    ...(userId ? { user_id: userId } : {}),
+    spiel_name: normalized.spielName,
+    datum: normalized.datum,
+    anzahl_runden: normalized.anzahlRunden,
+    mitspieler: normalized.mitspieler,
+    gewonnen: normalized.gewonnen,
+    notiz: normalized.notiz || null,
   }
 }
 
 function fromRow(row: GameEntryRow): GameEntry {
   return {
     id: row.id,
+    userId: row.user_id ?? undefined,
     spielName: row.spiel_name,
     datum: row.datum,
     anzahlRunden: row.anzahl_runden,
@@ -65,19 +71,30 @@ function writeLocalEntries(entries: GameEntry[]) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries))
 }
 
+async function getAuthenticatedUserId() {
+  if (!supabase) throw new Error('Supabase ist nicht konfiguriert.')
+
+  const { data, error } = await supabase.auth.getUser()
+  if (error) throw error
+  if (!data.user) throw new Error('Bitte melde dich erneut an.')
+
+  return data.user.id
+}
+
 export class LocalStorageGameEntryRepository implements GameEntryRepository {
   async list() {
     return readLocalEntries()
   }
 
   async create(entry: GameEntry) {
+    const normalizedEntry = { ...normalizeGameDraft(entry), id: entry.id }
     const entries = readLocalEntries()
-    writeLocalEntries([entry, ...entries])
-    return entry
+    writeLocalEntries([normalizedEntry, ...entries])
+    return normalizedEntry
   }
 
   async update(id: string, draft: GameEntryDraft) {
-    const updatedEntry = { ...draft, id }
+    const updatedEntry = { ...normalizeGameDraft(draft), id }
     const entries = readLocalEntries().map((entry) =>
       entry.id === id ? updatedEntry : entry,
     )
@@ -91,10 +108,10 @@ export class LocalStorageGameEntryRepository implements GameEntryRepository {
 }
 
 export class SupabaseGameEntryRepository implements GameEntryRepository {
-  constructor(private readonly client: SupabaseClient) {}
-
   async list() {
-    const { data, error } = await this.client
+    if (!supabase) return []
+
+    const { data, error } = await supabase
       .from(TABLE_NAME)
       .select('*')
       .order('datum', { ascending: false })
@@ -106,9 +123,12 @@ export class SupabaseGameEntryRepository implements GameEntryRepository {
   }
 
   async create(entry: GameEntry) {
-    const { data, error } = await this.client
+    if (!supabase) throw new Error('Supabase ist nicht konfiguriert.')
+
+    const userId = await getAuthenticatedUserId()
+    const { data, error } = await supabase
       .from(TABLE_NAME)
-      .insert({ ...toRow(entry), id: entry.id })
+      .insert({ ...toRow(entry, userId), id: entry.id })
       .select()
       .single()
 
@@ -118,7 +138,9 @@ export class SupabaseGameEntryRepository implements GameEntryRepository {
   }
 
   async update(id: string, draft: GameEntryDraft) {
-    const { data, error } = await this.client
+    if (!supabase) throw new Error('Supabase ist nicht konfiguriert.')
+
+    const { data, error } = await supabase
       .from(TABLE_NAME)
       .update(toRow(draft))
       .eq('id', id)
@@ -131,22 +153,18 @@ export class SupabaseGameEntryRepository implements GameEntryRepository {
   }
 
   async delete(id: string) {
-    const { error } = await this.client.from(TABLE_NAME).delete().eq('id', id)
+    if (!supabase) throw new Error('Supabase ist nicht konfiguriert.')
 
+    const { error } = await supabase.from(TABLE_NAME).delete().eq('id', id)
     if (error) throw error
   }
 }
 
 function createRepository() {
-  const url = import.meta.env.VITE_SUPABASE_URL
-  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-  if (url && anonKey) {
-    return new SupabaseGameEntryRepository(createClient(url, anonKey))
-  }
-
+  if (isSupabaseConfigured) return new SupabaseGameEntryRepository()
   return new LocalStorageGameEntryRepository()
 }
 
 export const gameEntryRepository = createRepository()
-export const isSupabaseConfigured = gameEntryRepository instanceof SupabaseGameEntryRepository
+export { isSupabaseConfigured }
+

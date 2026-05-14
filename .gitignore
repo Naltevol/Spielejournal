@@ -17,6 +17,7 @@ dist-ssr
 .pnpm-store
 .playwright-browsers
 output
+scripts-dist
 
 # Editor directories and files
 .vscode/*

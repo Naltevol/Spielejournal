@@ -400,7 +400,7 @@ svg {
   border-radius: 8px;
   display: grid;
   gap: 14px;
-  grid-template-columns: minmax(260px, 1fr) 160px 180px 160px auto;
+  grid-template-columns: minmax(260px, 1fr) 130px 150px 180px 150px auto;
   padding: 16px;
 }
 
@@ -556,4 +556,60 @@ svg {
     padding-left: 16px;
     padding-right: 16px;
   }
+}
+
+
+.app-header__actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.login-shell {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 100svh;
+  padding: 24px;
+}
+
+.login-card {
+  max-width: 460px;
+  width: 100%;
+}
+
+.login-card__icon {
+  align-items: center;
+  background: rgba(125, 211, 252, 0.14);
+  border: 1px solid rgba(125, 211, 252, 0.32);
+  border-radius: 8px;
+  color: var(--primary);
+  display: inline-flex;
+  justify-content: center;
+  margin-bottom: 8px;
+  padding: 10px;
+  width: max-content;
+}
+
+.field-group--single {
+  grid-template-columns: 1fr;
+}
+
+.suggestion-box {
+  background: rgba(125, 211, 252, 0.1);
+  border: 1px solid rgba(125, 211, 252, 0.28);
+  border-radius: 8px;
+  color: var(--muted-strong);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
+.suggestion-box__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }

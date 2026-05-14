@@ -10,7 +10,7 @@ const cards = [
   { key: 'gesamtRunden', label: 'Gespielte Runden', icon: Hash },
   { key: 'unterschiedlicheSpiele', label: 'Unterschiedliche Spiele', icon: Dice5 },
   { key: 'haeufigstesSpiel', label: 'Häufigstes Spiel', icon: Trophy },
-  { key: 'haeufigsterMitspieler', label: 'Häufigster Mitspieler', icon: Users },
+  { key: 'haeufigsterMitspieler', label: 'Meiste Mitspieler-Runden', icon: Users },
   { key: 'gewinnquote', label: 'Gewinnquote', icon: TrendingUp },
 ] as const
 

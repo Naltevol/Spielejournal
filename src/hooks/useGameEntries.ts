@@ -7,15 +7,17 @@ function createId() {
     return window.crypto.randomUUID()
   }
 
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`
+  return String(Date.now()) + '-' + Math.random().toString(16).slice(2)
 }
 
-export function useGameEntries() {
+export function useGameEntries(isEnabled = true) {
   const [entries, setEntries] = useState<GameEntry[]>([])
   const [isReady, setIsReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!isEnabled) return
+
     gameEntryRepository
       .list()
       .then((loadedEntries) => {
@@ -26,7 +28,7 @@ export function useGameEntries() {
         setError(reason instanceof Error ? reason.message : 'Daten konnten nicht geladen werden.')
       })
       .finally(() => setIsReady(true))
-  }, [])
+  }, [isEnabled])
 
   const sortedEntries = useMemo(
     () =>
@@ -95,3 +97,4 @@ export function useGameEntries() {
     deleteEntry,
   }
 }
+

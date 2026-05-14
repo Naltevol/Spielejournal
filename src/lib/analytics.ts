@@ -1,4 +1,6 @@
+import { normalizeGameName } from '../domain/gameAliases'
 import type { AnalyticsSummary, GameEntry, NamedCount } from '../types'
+import { getEntryMonth } from './utils'
 
 function addToMap(map: Map<string, number>, key: string, value: number) {
   map.set(key, (map.get(key) ?? 0) + value)
@@ -16,15 +18,26 @@ export function getYears(entries: GameEntry[]) {
     .sort((a, b) => Number(b) - Number(a))
 }
 
+export function getMonths(entries: GameEntry[], year: string) {
+  return [...new Set(entries
+    .filter((entry) => year === 'alle' || entry.datum.startsWith(year))
+    .map((entry) => getEntryMonth(entry.datum)))]
+    .filter(Boolean)
+    .sort((a, b) => Number(a) - Number(b))
+}
+
 export function getPlayers(entries: GameEntry[]) {
   return [...new Set(entries.flatMap((entry) => entry.mitspieler))]
     .filter(Boolean)
     .sort((a, b) => a.localeCompare(b, 'de'))
 }
 
-export function filterEntries(entries: GameEntry[], year: string) {
-  if (year === 'alle') return entries
-  return entries.filter((entry) => entry.datum.startsWith(year))
+export function filterEntries(entries: GameEntry[], year: string, month = 'alle') {
+  return entries.filter((entry) => {
+    const matchesYear = year === 'alle' || entry.datum.startsWith(year)
+    const matchesMonth = month === 'alle' || getEntryMonth(entry.datum) === month
+    return matchesYear && matchesMonth
+  })
 }
 
 export function buildCounts(entries: GameEntry[]) {
@@ -32,7 +45,7 @@ export function buildCounts(entries: GameEntry[]) {
   const playerCounts = new Map<string, number>()
 
   for (const entry of entries) {
-    addToMap(gameCounts, entry.spielName, entry.anzahlRunden)
+    addToMap(gameCounts, normalizeGameName(entry.spielName), entry.anzahlRunden)
     for (const player of entry.mitspieler) {
       addToMap(playerCounts, player, entry.anzahlRunden)
     }
@@ -58,9 +71,10 @@ export function summarizeEntries(entries: GameEntry[]): AnalyticsSummary {
 
   return {
     gesamtRunden,
-    unterschiedlicheSpiele: new Set(entries.map((entry) => entry.spielName)).size,
+    unterschiedlicheSpiele: new Set(entries.map((entry) => normalizeGameName(entry.spielName))).size,
     haeufigstesSpiel: counts.games[0]?.name ?? 'Keine Daten',
     haeufigsterMitspieler: counts.players[0]?.name ?? 'Keine Daten',
     gewinnquote: gesamtRunden === 0 ? 0 : Math.round((gewonnen / gesamtRunden) * 100),
   }
 }
+

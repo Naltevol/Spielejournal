@@ -1,5 +1,6 @@
 export type GameEntry = {
   id: string
+  userId?: string
   spielName: string
   datum: string
   anzahlRunden: number
@@ -8,11 +9,12 @@ export type GameEntry = {
   notiz?: string
 }
 
-export type GameEntryDraft = Omit<GameEntry, 'id'>
+export type GameEntryDraft = Omit<GameEntry, 'id' | 'userId'>
 
 export type GameFilters = {
   suche: string
   jahr: string
+  monat: string
   mitspieler: string
   gewinnstatus: 'alle' | 'gewonnen' | 'verloren'
 }
@@ -29,3 +31,4 @@ export type NamedCount = {
   name: string
   value: number
 }
+

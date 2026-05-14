@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:import": "tsc -p tsconfig.scripts.json",
+    "import:games": "npm run build:import && node scripts-dist/scripts/import-game-entries.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.4",

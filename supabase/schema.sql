@@ -2,20 +2,28 @@ create extension if not exists pgcrypto;
 
 create table if not exists public.game_entries (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
   spiel_name text not null,
   datum date not null,
   anzahl_runden integer not null check (anzahl_runden > 0),
   mitspieler text[] not null default '{}',
   gewonnen integer not null default 0 check (gewonnen >= 0),
   notiz text,
+  import_key text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint game_entries_wins_lte_rounds check (gewonnen <= anzahl_runden)
 );
 
-create index if not exists game_entries_datum_idx on public.game_entries (datum desc);
-create index if not exists game_entries_spiel_name_idx on public.game_entries (spiel_name);
-create index if not exists game_entries_mitspieler_idx on public.game_entries using gin (mitspieler);
+alter table public.game_entries add column if not exists user_id uuid references auth.users(id) on delete cascade;
+alter table public.game_entries add column if not exists import_key text;
+alter table public.game_entries alter column user_id set default auth.uid();
+
+create index if not exists game_entries_user_datum_idx on public.game_entries (user_id, datum desc);
+create index if not exists game_entries_user_spiel_name_idx on public.game_entries (user_id, spiel_name);
+create index if not exists game_entries_user_mitspieler_idx on public.game_entries using gin (mitspieler);
+create unique index if not exists game_entries_user_import_key_idx
+  on public.game_entries (user_id, import_key);
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -35,37 +43,42 @@ for each row
 execute function public.set_updated_at();
 
 alter table public.game_entries enable row level security;
+alter table public.game_entries force row level security;
 
-create policy "game_entries_select_public"
+drop policy if exists "game_entries_select_public" on public.game_entries;
+drop policy if exists "game_entries_insert_public" on public.game_entries;
+drop policy if exists "game_entries_update_public" on public.game_entries;
+drop policy if exists "game_entries_delete_public" on public.game_entries;
+drop policy if exists "game_entries_select_own" on public.game_entries;
+drop policy if exists "game_entries_insert_own" on public.game_entries;
+drop policy if exists "game_entries_update_own" on public.game_entries;
+drop policy if exists "game_entries_delete_own" on public.game_entries;
+
+create policy "game_entries_select_own"
 on public.game_entries
 for select
-to anon
-using (true);
+to authenticated
+using (user_id = auth.uid());
 
-create policy "game_entries_insert_public"
+create policy "game_entries_insert_own"
 on public.game_entries
 for insert
-to anon
-with check (true);
+to authenticated
+with check (user_id = auth.uid());
 
-create policy "game_entries_update_public"
+create policy "game_entries_update_own"
 on public.game_entries
 for update
-to anon
-using (true)
-with check (true);
+to authenticated
+using (user_id = auth.uid())
+with check (user_id = auth.uid());
 
-create policy "game_entries_delete_public"
+create policy "game_entries_delete_own"
 on public.game_entries
 for delete
-to anon
-using (true);
+to authenticated
+using (user_id = auth.uid());
 
-insert into public.game_entries
-  (id, spiel_name, datum, anzahl_runden, mitspieler, gewonnen, notiz)
-values
-  ('00000000-0000-4000-8000-000000000001', 'Monopoly Deal', '2026-01-01', 3, array['Nele'], 2, null),
-  ('00000000-0000-4000-8000-000000000002', 'Skull', '2026-01-02', 3, array['Nele', 'Lennart', 'Lukas'], 2, null),
-  ('00000000-0000-4000-8000-000000000003', 'Doppelkopf', '2026-01-02', 5, array['Nele', 'Lennart', 'Lukas'], 4, null),
-  ('00000000-0000-4000-8000-000000000004', 'Bomb Busters', '2026-01-03', 10, array['Nele', 'Lennart', 'Lukas', 'Eila'], 8, 'Teamspiel')
-on conflict (id) do nothing;
+-- Optional nach dem Bereinigen/Importieren ausführen, wenn keine alten Zeilen ohne Nutzer mehr existieren:
+-- alter table public.game_entries alter column user_id set not null;
+
