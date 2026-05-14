@@ -102,16 +102,19 @@ function App() {
         </div>
       ) : null}
 
-      <section className="diagnostics-panel" aria-label="Datenlade-Diagnose">
-        <div><strong>Supabase konfiguriert:</strong> {diagnostics.isSupabaseConfigured ? 'ja' : 'nein'}</div>
-        <div><strong>Datenquelle:</strong> {diagnostics.source}</div>
-        <div><strong>Rohdatensätze aus Supabase/localStorage:</strong> {diagnostics.rawRowCount ?? 'unbekannt'}</div>
-        <div><strong>Letzter Ladefehler:</strong> {diagnostics.lastError ?? 'keiner'}</div>
-        <details>
-          <summary>Erster Rohdatensatz</summary>
-          <pre>{diagnostics.firstRawRow ? JSON.stringify(diagnostics.firstRawRow, null, 2) : 'kein Rohdatensatz geladen'}</pre>
-        </details>
-      </section>
+      <details className="diagnostics-panel" aria-label="Datenlade-Diagnose">
+        <summary>Datenlade-Diagnose</summary>
+        <div className="diagnostics-panel__content">
+          <div><strong>Supabase konfiguriert:</strong> {diagnostics.isSupabaseConfigured ? 'ja' : 'nein'}</div>
+          <div><strong>Datenquelle:</strong> {diagnostics.source}</div>
+          <div><strong>Rohdatensätze aus Supabase/localStorage:</strong> {diagnostics.rawRowCount ?? 'unbekannt'}</div>
+          <div><strong>Letzter Ladefehler:</strong> {diagnostics.lastError ?? 'keiner'}</div>
+          <details>
+            <summary>Erster Rohdatensatz</summary>
+            <pre>{diagnostics.firstRawRow ? JSON.stringify(diagnostics.firstRawRow, null, 2) : 'kein Rohdatensatz geladen'}</pre>
+          </details>
+        </div>
+      </details>
 
       <section className="workspace">
         <div className="workspace__main">
