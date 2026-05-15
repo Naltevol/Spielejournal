@@ -18,6 +18,7 @@ create table if not exists public.game_entries (
 alter table public.game_entries add column if not exists user_id uuid references auth.users(id) on delete cascade;
 alter table public.game_entries add column if not exists import_key text;
 alter table public.game_entries alter column user_id set default auth.uid();
+alter table public.game_entries alter column user_id set not null;
 
 create index if not exists game_entries_user_datum_idx on public.game_entries (user_id, datum desc);
 create index if not exists game_entries_user_spiel_name_idx on public.game_entries (user_id, spiel_name);
@@ -28,6 +29,7 @@ create unique index if not exists game_entries_user_import_key_idx
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
+set search_path = public
 as $$
 begin
   new.updated_at = now();
@@ -53,30 +55,31 @@ drop policy if exists "game_entries_insert_own" on public.game_entries;
 drop policy if exists "game_entries_update_own" on public.game_entries;
 drop policy if exists "game_entries_delete_own" on public.game_entries;
 
-create policy "game_entries_select_public"
+create policy "game_entries_select_own"
 on public.game_entries
 for select
-to anon, authenticated
-using (true);
+to authenticated
+using (user_id = auth.uid());
 
-create policy "game_entries_insert_public"
+create policy "game_entries_insert_own"
 on public.game_entries
 for insert
-to anon, authenticated
-with check (true);
+to authenticated
+with check (user_id = auth.uid());
 
-create policy "game_entries_update_public"
+create policy "game_entries_update_own"
 on public.game_entries
 for update
-to anon, authenticated
-using (true)
-with check (true);
+to authenticated
+using (user_id = auth.uid())
+with check (user_id = auth.uid());
 
-create policy "game_entries_delete_public"
+create policy "game_entries_delete_own"
 on public.game_entries
 for delete
-to anon, authenticated
-using (true);
+to authenticated
+using (user_id = auth.uid());
 
--- Die App ist aktuell öffentlich: anon und authenticated dürfen alle Einträge lesen, erstellen, bearbeiten und löschen.
-
+-- Kontrolle vor dem Scharfschalten privater Policies:
+-- select count(*) from public.game_entries where user_id is null;
+-- Erwartung: 0. Bestehende Einträge bleiben erhalten und müssen einer auth.users.id zugeordnet sein.
