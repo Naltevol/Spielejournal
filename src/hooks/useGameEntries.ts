@@ -12,13 +12,14 @@ function createId() {
 
 const initialDiagnostics: DataSourceDiagnostics = {
   isSupabaseConfigured,
+  isLoginActive: isSupabaseConfigured,
   source: isSupabaseConfigured ? 'supabase' : 'localStorage',
   rawRowCount: null,
   lastError: null,
   firstRawRow: null,
 }
 
-export function useGameEntries(isEnabled = true) {
+export function useGameEntries(isEnabled = true, userId?: string) {
   const [entries, setEntries] = useState<GameEntry[]>([])
   const [isReady, setIsReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -28,7 +29,7 @@ export function useGameEntries(isEnabled = true) {
     if (!isEnabled) return
 
     gameEntryRepository
-      .list()
+      .list(userId)
       .then((result) => {
         setEntries(result.entries)
         setDiagnostics(result.diagnostics)
@@ -40,7 +41,7 @@ export function useGameEntries(isEnabled = true) {
         setDiagnostics((current) => ({ ...current, lastError: message }))
       })
       .finally(() => setIsReady(true))
-  }, [isEnabled])
+  }, [isEnabled, userId])
 
   const sortedEntries = useMemo(
     () =>
@@ -53,7 +54,7 @@ export function useGameEntries(isEnabled = true) {
   )
 
   const addEntry = useCallback(async (draft: GameEntryDraft) => {
-    const optimisticEntry = { ...draft, id: createId() }
+    const optimisticEntry = { ...draft, id: createId(), userId }
     setEntries((current) => [optimisticEntry, ...current])
 
     try {
@@ -73,7 +74,7 @@ export function useGameEntries(isEnabled = true) {
       setError(message)
       setDiagnostics((current) => ({ ...current, lastError: message }))
     }
-  }, [])
+  }, [userId])
 
   const updateEntry = useCallback(async (id: string, draft: GameEntryDraft) => {
     const previousEntries = entries
