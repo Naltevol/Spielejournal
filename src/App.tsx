@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
-import { BarChart3, Database, Dice5 } from 'lucide-react'
+import { BarChart3, Database, Dice5, LogOut } from 'lucide-react'
 import './index.css'
 import { buildCounts, filterEntries, getMonths, getPlayers, getYears, summarizeEntries } from './lib/analytics'
 import { exportEntriesAsCsv } from './lib/csv'
+import { useAuth } from './hooks/useAuth'
 import { useGameEntries } from './hooks/useGameEntries'
 import { isSupabaseConfigured } from './storage/gameEntryRepository'
 import type { GameEntry, GameEntryDraft, GameFilters } from './types'
@@ -11,6 +12,8 @@ import { DashboardCards } from './components/DashboardCards'
 import { GameEntryForm } from './components/GameEntryForm'
 import { GameFiltersBar } from './components/GameFiltersBar'
 import { GameTable } from './components/GameTable'
+import { LoginPage } from './components/auth/LoginPage'
+import { Button } from './components/ui/Button'
 
 const initialFilters: GameFilters = {
   suche: '',
@@ -21,7 +24,22 @@ const initialFilters: GameFilters = {
 }
 
 function App() {
-  const { entries, isReady, error, diagnostics, addEntry, updateEntry, deleteEntry } = useGameEntries(true)
+  const {
+    session,
+    user,
+    isLoading: isAuthLoading,
+    error: authError,
+    signIn,
+    signUp,
+    sendMagicLink,
+    signOut,
+  } = useAuth()
+  const isPrivateSupabaseApp = isSupabaseConfigured
+  const canLoadEntries = !isPrivateSupabaseApp || Boolean(user)
+  const { entries, isReady, error, diagnostics, addEntry, updateEntry, deleteEntry } = useGameEntries(
+    canLoadEntries,
+    user?.id,
+  )
   const [filters, setFilters] = useState<GameFilters>(initialFilters)
   const [editingEntry, setEditingEntry] = useState<GameEntry | null>(null)
 
@@ -57,6 +75,10 @@ function App() {
   const counts = useMemo(() => buildCounts(dashboardEntries), [dashboardEntries])
 
   function handleSubmit(draft: GameEntryDraft) {
+    if (isPrivateSupabaseApp && !session) {
+      return
+    }
+
     if (editingEntry) {
       updateEntry(editingEntry.id, draft)
       setEditingEntry(null)
@@ -64,6 +86,26 @@ function App() {
     }
 
     addEntry(draft)
+  }
+
+  if (isPrivateSupabaseApp && isAuthLoading) {
+    return (
+      <main className="login-shell">
+        <div className="app-notice">Login wird geprüft...</div>
+      </main>
+    )
+  }
+
+  if (isPrivateSupabaseApp && !session) {
+    return (
+      <LoginPage
+        error={authError}
+        isLoading={isAuthLoading}
+        onSendMagicLink={sendMagicLink}
+        onSignIn={signIn}
+        onSignUp={signUp}
+      />
+    )
   }
 
   return (
@@ -76,23 +118,29 @@ function App() {
           </div>
           <h1>Gesellschaftsspiele dokumentieren und auswerten</h1>
           <p>
-            Schnelle Erfassung, bereinigte Spielnamen und gemeinsame Cloud-Daten.
+            Schnelle Erfassung, bereinigte Spielnamen und private Cloud-Daten nach Login.
           </p>
         </div>
         <div className="app-header__actions">
           <div className="app-header__aside" aria-label="Speicherstatus">
             <Database aria-hidden="true" />
-            <span>{isSupabaseConfigured ? 'Supabase Cloud öffentlich' : 'localStorage aktiv'}</span>
+            <span>{isSupabaseConfigured ? 'Supabase Cloud privat' : 'localStorage aktiv'}</span>
             <small>{isReady ? `${entries.length} Einträge geladen` : 'Daten werden geladen...'}</small>
           </div>
+          {isSupabaseConfigured ? (
+            <Button onClick={signOut} title="Abmelden" variant="secondary">
+              <LogOut data-icon="inline-start" />
+              Abmelden
+            </Button>
+          ) : null}
         </div>
       </header>
 
       {error ? <div className="app-alert">{error}</div> : null}
       {isReady && !error && isSupabaseConfigured && entries.length === 0 ? (
         <div className="app-alert">
-          Supabase ist verbunden, aber die öffentliche Abfrage liefert 0 Einträge. Prüfe in Supabase die
-          anon-Select-Policy für <code>game_entries</code> und ob Vercel mit dem richtigen Projekt gebaut wurde.
+          Supabase ist verbunden, aber für diesen Login wurden 0 Einträge geladen. Prüfe, ob die
+          Einträge die richtige <code>user_id</code> haben und ob die RLS-Policy den angemeldeten Nutzer zulässt.
         </div>
       ) : null}
       {isReady && !isSupabaseConfigured ? (
@@ -105,10 +153,13 @@ function App() {
       <details className="diagnostics-panel" aria-label="Datenlade-Diagnose">
         <summary>Datenlade-Diagnose</summary>
         <div className="diagnostics-panel__content">
-          <div><strong>Supabase konfiguriert:</strong> {diagnostics.isSupabaseConfigured ? 'ja' : 'nein'}</div>
+          <div><strong>Supabase verbunden:</strong> {diagnostics.isSupabaseConfigured ? 'ja' : 'nein'}</div>
+          <div><strong>Login aktiv:</strong> {diagnostics.isLoginActive ? 'ja' : 'nein'}</div>
+          <div><strong>Angemeldet:</strong> {session ? 'ja' : 'nein'}</div>
           <div><strong>Datenquelle:</strong> {diagnostics.source}</div>
+          <div><strong>Geladene Einträge:</strong> {entries.length}</div>
           <div><strong>Rohdatensätze aus Supabase/localStorage:</strong> {diagnostics.rawRowCount ?? 'unbekannt'}</div>
-          <div><strong>Letzter Ladefehler:</strong> {diagnostics.lastError ?? 'keiner'}</div>
+          <div><strong>Letzter Ladefehler/RLS-Meldung:</strong> {diagnostics.lastError ?? 'keiner'}</div>
           <details>
             <summary>Erster Rohdatensatz</summary>
             <pre>{diagnostics.firstRawRow ? JSON.stringify(diagnostics.firstRawRow, null, 2) : 'kein Rohdatensatz geladen'}</pre>
@@ -160,4 +211,3 @@ function App() {
 }
 
 export default App
-
