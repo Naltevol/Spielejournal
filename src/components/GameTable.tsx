@@ -11,33 +11,6 @@ type GameTableProps = {
   onDelete: (id: string) => void
 }
 
-function getResultDisplay(entry: GameEntry) {
-  const won = entry.gewonnen
-  const total = entry.anzahlRunden
-
-  if (won === 0) {
-    return {
-      className: 'result-badge result-badge--lost',
-      label: `Verloren · ${won} von ${total}`,
-      shortLabel: 'Verloren',
-    }
-  }
-
-  if (won === total) {
-    return {
-      className: 'result-badge result-badge--won',
-      label: `Gewonnen · ${won} von ${total}`,
-      shortLabel: 'Gewonnen',
-    }
-  }
-
-  return {
-    className: 'result-badge result-badge--partial',
-    label: `Teilweise gewonnen · ${won} von ${total}`,
-    shortLabel: `${won}/${total} gewonnen`,
-  }
-}
-
 export function GameTable({ entries, onEdit, onDelete }: GameTableProps) {
   return (
     <Card className="table-card">
@@ -60,43 +33,47 @@ export function GameTable({ entries, onEdit, onDelete }: GameTableProps) {
             </thead>
             <tbody>
               {entries.length ? (
-                entries.map((entry) => {
-                  const result = getResultDisplay(entry)
-
-                  return (
-                    <tr key={entry.id}>
-                      <td className="games-table__game">{entry.spielName}</td>
-                      <td>{entry.anzahlRunden}</td>
-                      <td>{formatDate(entry.datum)}</td>
-                      <td>{entry.mitspieler.join(', ') || 'Solo'}</td>
-                      <td>
-                        <Badge className={result.className} title={result.label}>
-                          <span className="result-badge__full">{result.label}</span>
-                          <span className="result-badge__short">{result.shortLabel}</span>
-                        </Badge>
-                      </td>
-                      <td className="games-table__note">{entry.notiz}</td>
-                      <td>
-                        <div className="row-actions">
-                          <Button
-                            aria-label={`${entry.spielName} bearbeiten`}
-                            onClick={() => onEdit(entry)}
-                            variant="ghost"
-                          >
-                            <Pencil data-icon="inline-start" />
-                          </Button>
-                          <Button
-                            aria-label={`${entry.spielName} löschen`}
-                            onClick={() => onDelete(entry.id)}
-                            variant="ghost"
-                          >
-                            <Trash2 data-icon="inline-start" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })
+                entries.map((entry) => (
+                  <tr key={entry.id}>
+                    <td className="games-table__game">{entry.spielName}</td>
+                    <td>{entry.anzahlRunden}</td>
+                    <td>{formatDate(entry.datum)}</td>
+                    <td>{entry.mitspieler.join(', ') || 'Solo'}</td>
+                    <td className="games-table__result">
+                      <Badge
+                        className="result-badge"
+                        style={{
+                          background: 'rgba(125, 211, 252, 0.08)',
+                          borderColor: 'rgba(125, 211, 252, 0.22)',
+                          color: 'var(--muted-strong)',
+                        }}
+                      >
+                        {entry.gewonnen} von {entry.anzahlRunden} gewonnen
+                      </Badge>
+                    </td>
+                    <td className="games-table__note">{entry.notiz}</td>
+                    <td>
+                      <div className="row-actions">
+                        <Button
+                          aria-label={`${entry.spielName} bearbeiten`}
+                          onClick={() => onEdit(entry)}
+                          title="Eintrag bearbeiten"
+                          variant="ghost"
+                        >
+                          <Pencil data-icon="inline-start" />
+                        </Button>
+                        <Button
+                          aria-label={`${entry.spielName} löschen`}
+                          onClick={() => onDelete(entry.id)}
+                          title="Eintrag löschen"
+                          variant="ghost"
+                        >
+                          <Trash2 data-icon="inline-start" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
               ) : (
                 <tr>
                   <td className="games-table__empty" colSpan={7}>
