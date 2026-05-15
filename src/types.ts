@@ -35,6 +35,7 @@ export type NamedCount = {
 
 export type DataSourceDiagnostics = {
   isSupabaseConfigured: boolean
+  isLoginActive: boolean
   source: 'supabase' | 'localStorage'
   rawRowCount: number | null
   lastError: string | null
