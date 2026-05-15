@@ -23,7 +23,7 @@ const GAME_ENTRY_COLUMNS = [
 type GameEntryRow = Record<string, unknown>
 
 export interface GameEntryRepository {
-  list(): Promise<GameEntryLoadResult>
+  list(userId?: string): Promise<GameEntryLoadResult>
   create(entry: GameEntry): Promise<GameEntry>
   update(id: string, draft: GameEntryDraft): Promise<GameEntry>
   delete(id: string): Promise<void>
@@ -35,6 +35,7 @@ function createDiagnostics(
 ): DataSourceDiagnostics {
   return {
     isSupabaseConfigured,
+    isLoginActive: isSupabaseConfigured,
     source,
     rawRowCount: null,
     lastError: null,
@@ -81,8 +82,10 @@ function getPlayers(row: GameEntryRow) {
 
 function toRow(entry: GameEntry | GameEntryDraft) {
   const normalized = normalizeGameDraft(entry)
+  const userId = 'userId' in entry ? entry.userId : undefined
 
   return {
+    ...(userId ? { user_id: userId } : {}),
     spiel_name: normalized.spielName,
     datum: normalized.datum,
     anzahl_runden: normalized.anzahlRunden,
@@ -167,7 +170,7 @@ export class LocalStorageGameEntryRepository implements GameEntryRepository {
 }
 
 export class SupabaseGameEntryRepository implements GameEntryRepository {
-  async list() {
+  async list(userId?: string) {
     if (!supabase) {
       return {
         entries: [],
@@ -177,9 +180,19 @@ export class SupabaseGameEntryRepository implements GameEntryRepository {
       }
     }
 
+    if (!userId) {
+      return {
+        entries: [],
+        diagnostics: createDiagnostics('supabase', {
+          lastError: 'Bitte melde dich an, um deine Spiele zu laden.',
+        }),
+      }
+    }
+
     const { data, error, count } = await supabase
       .from(TABLE_NAME)
       .select(GAME_ENTRY_COLUMNS, { count: 'exact' })
+      .eq('user_id', userId)
       .order('datum', { ascending: false })
       .order('spiel_name', { ascending: true })
 
