@@ -1,0 +1,18 @@
+.empty-data-state {
+  background: linear-gradient(180deg, rgba(21, 27, 36, 0.72), rgba(16, 20, 27, 0.72));
+  border: 1px solid rgba(125, 211, 252, 0.22);
+  border-radius: 8px;
+  color: var(--muted);
+  display: grid;
+  gap: 6px;
+  padding: 18px 20px;
+}
+
+.empty-data-state strong {
+  color: var(--text);
+  font-size: 1.05rem;
+}
+
+.empty-data-state span {
+  font-weight: 700;
+}
