@@ -19,6 +19,8 @@ const initialDiagnostics: DataSourceDiagnostics = {
   firstRawRow: null,
 }
 
+const LOAD_ERROR_MESSAGE = 'Daten konnten nicht geladen werden. Bitte später erneut versuchen.'
+
 export function useGameEntries(isEnabled = true, userId?: string) {
   const [entries, setEntries] = useState<GameEntry[]>([])
   const [isReady, setIsReady] = useState(false)
@@ -33,12 +35,12 @@ export function useGameEntries(isEnabled = true, userId?: string) {
       .then((result) => {
         setEntries(result.entries)
         setDiagnostics(result.diagnostics)
-        setError(result.diagnostics.lastError)
+        setError(result.diagnostics.lastError ? LOAD_ERROR_MESSAGE : null)
       })
       .catch((reason: unknown) => {
-        const message = reason instanceof Error ? reason.message : 'Daten konnten nicht geladen werden.'
-        setError(message)
-        setDiagnostics((current) => ({ ...current, lastError: message }))
+        const technicalMessage = reason instanceof Error ? reason.message : LOAD_ERROR_MESSAGE
+        setError(LOAD_ERROR_MESSAGE)
+        setDiagnostics((current) => ({ ...current, lastError: technicalMessage }))
       })
       .finally(() => setIsReady(true))
   }, [isEnabled, userId])
