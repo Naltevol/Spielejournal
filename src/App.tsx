@@ -2,7 +2,15 @@ import { useMemo, useState } from 'react'
 import { BarChart3, Database, Dice5, LogOut } from 'lucide-react'
 import './index.css'
 import './playerChips.css'
-import { buildCounts, filterEntries, getMonths, getPlayers, getYears, summarizeEntries } from './lib/analytics'
+import {
+  buildCounts,
+  buildGameOutcomeSummaries,
+  filterEntries,
+  getMonths,
+  getPlayers,
+  getYears,
+  summarizeEntries,
+} from './lib/analytics'
 import { exportEntriesAsCsv } from './lib/csv'
 import { useAuth } from './hooks/useAuth'
 import { useGameEntries } from './hooks/useGameEntries'
@@ -12,6 +20,7 @@ import { ChartsPanel } from './components/ChartsPanel'
 import { DashboardCards } from './components/DashboardCards'
 import { GameEntryForm } from './components/GameEntryForm'
 import { GameFiltersBar } from './components/GameFiltersBar'
+import { GameOutcomePanel } from './components/GameOutcomePanel'
 import { GameTable } from './components/GameTable'
 import { LoginPage } from './components/auth/LoginPage'
 import { Button } from './components/ui/Button'
@@ -74,6 +83,10 @@ function App() {
   )
   const summary = useMemo(() => summarizeEntries(dashboardEntries), [dashboardEntries])
   const counts = useMemo(() => buildCounts(dashboardEntries), [dashboardEntries])
+  const gameOutcomes = useMemo(
+    () => buildGameOutcomeSummaries(dashboardEntries),
+    [dashboardEntries],
+  )
 
   function handleSubmit(draft: GameEntryDraft) {
     if (isPrivateSupabaseApp && !session) {
@@ -179,6 +192,7 @@ function App() {
           </div>
           <DashboardCards summary={summary} />
           <ChartsPanel games={counts.games} players={counts.players} results={counts.results} />
+          <GameOutcomePanel outcomes={gameOutcomes} />
         </div>
 
         <aside className="workspace__side">
