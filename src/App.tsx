@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { BarChart3, Database, Dice5, LogOut } from 'lucide-react'
 import './index.css'
+import './playerChips.css'
 import { buildCounts, filterEntries, getMonths, getPlayers, getYears, summarizeEntries } from './lib/analytics'
 import { exportEntriesAsCsv } from './lib/csv'
 import { useAuth } from './hooks/useAuth'
