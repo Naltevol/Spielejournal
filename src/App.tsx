@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { BarChart3, Database, Dice5, LogOut } from 'lucide-react'
 import './index.css'
 import './playerChips.css'
+import './emptyState.css'
 import {
   buildCounts,
   buildGameOutcomeSummaries,
@@ -52,6 +53,12 @@ function App() {
   )
   const [filters, setFilters] = useState<GameFilters>(initialFilters)
   const [editingEntry, setEditingEntry] = useState<GameEntry | null>(null)
+  const showEmptyDataState =
+    isReady &&
+    !error &&
+    diagnostics.isSupabaseConfigured &&
+    diagnostics.isLoginActive &&
+    entries.length === 0
 
   const years = useMemo(() => getYears(entries), [entries])
   const months = useMemo(() => getMonths(entries, filters.jahr), [entries, filters.jahr])
@@ -151,10 +158,10 @@ function App() {
       </header>
 
       {error ? <div className="app-alert">{error}</div> : null}
-      {isReady && !error && isSupabaseConfigured && entries.length === 0 ? (
-        <div className="app-alert">
-          Supabase ist verbunden, aber für diesen Login wurden 0 Einträge geladen. Prüfe, ob die
-          Einträge die richtige <code>user_id</code> haben und ob die RLS-Policy den angemeldeten Nutzer zulässt.
+      {showEmptyDataState ? (
+        <div className="empty-data-state" role="status">
+          <strong>Noch keine Spiele eingetragen.</strong>
+          <span>Erfasse deine erste Runde über das Formular.</span>
         </div>
       ) : null}
       {isReady && !isSupabaseConfigured ? (
