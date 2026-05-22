@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
 
+const inviteCode = (import.meta.env.VITE_INVITE_CODE ?? '').trim()
+
 type AuthResult = {
   message?: string
 }
@@ -40,8 +42,18 @@ export function useAuth() {
     return signInError ? {} : { message: 'Du bist angemeldet.' }
   }, [])
 
-  const signUp = useCallback(async (email: string, password: string): Promise<AuthResult> => {
+  const signUp = useCallback(async (
+    email: string,
+    password: string,
+    enteredInviteCode: string,
+  ): Promise<AuthResult> => {
     if (!supabase) return {}
+
+    if (!inviteCode || enteredInviteCode.trim() !== inviteCode) {
+      setError('Einladungscode ist ungültig.')
+      return {}
+    }
+
     setIsLoading(true)
     setError(null)
 
@@ -65,14 +77,14 @@ export function useAuth() {
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        shouldCreateUser: true,
+        shouldCreateUser: false,
         emailRedirectTo: window.location.origin,
       },
     })
     setError(otpError?.message ?? null)
     setIsLoading(false)
 
-    return otpError ? {} : { message: 'Login-Link gesendet. Öffne die E-Mail auf diesem Gerät. Falls noch kein App-Konto existiert, wird es dabei angelegt.' }
+    return otpError ? {} : { message: 'Login-Link gesendet. Öffne die E-Mail auf diesem Gerät.' }
   }, [])
 
   const signOut = useCallback(async () => {
