@@ -2,6 +2,14 @@ import { normalizeGameName } from '../domain/gameAliases'
 import type { AnalyticsSummary, GameEntry, NamedCount } from '../types'
 import { getEntryMonth } from './utils'
 
+export type GameOutcomeSummary = {
+  name: string
+  played: number
+  won: number
+  lost: number
+  winRate: number
+}
+
 function addToMap(map: Map<string, number>, key: string, value: number) {
   map.set(key, (map.get(key) ?? 0) + value)
 }
@@ -64,6 +72,31 @@ export function buildCounts(entries: GameEntry[]) {
   }
 }
 
+export function buildGameOutcomeSummaries(entries: GameEntry[]): GameOutcomeSummary[] {
+  const summaries = new Map<string, { name: string; played: number; won: number }>()
+
+  for (const entry of entries) {
+    const name = normalizeGameName(entry.spielName)
+    const summary = summaries.get(name) ?? { name, played: 0, won: 0 }
+
+    summary.played += entry.anzahlRunden
+    summary.won += entry.gewonnen
+    summaries.set(name, summary)
+  }
+
+  return [...summaries.values()]
+    .map((summary) => {
+      const lost = Math.max(0, summary.played - summary.won)
+
+      return {
+        ...summary,
+        lost,
+        winRate: summary.played === 0 ? 0 : summary.won / summary.played,
+      }
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, 'de'))
+}
+
 export function summarizeEntries(entries: GameEntry[]): AnalyticsSummary {
   const counts = buildCounts(entries)
   const gesamtRunden = entries.reduce((sum, entry) => sum + entry.anzahlRunden, 0)
@@ -77,4 +110,3 @@ export function summarizeEntries(entries: GameEntry[]): AnalyticsSummary {
     gewinnquote: gesamtRunden === 0 ? 0 : Math.round((gewonnen / gesamtRunden) * 100),
   }
 }
-
