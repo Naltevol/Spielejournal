@@ -184,6 +184,7 @@ function App() {
           <GameEntryForm
             editingEntry={editingEntry}
             existingGameNames={gameNames}
+            knownPlayerNames={players}
             key={editingEntry?.id ?? 'new-entry'}
             onCancelEdit={() => setEditingEntry(null)}
             onSubmit={handleSubmit}
