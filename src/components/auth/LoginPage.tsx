@@ -14,7 +14,7 @@ type LoginPageProps = {
   error: string | null
   isLoading: boolean
   onSignIn: (email: string, password: string) => Promise<AuthResult>
-  onSignUp: (email: string, password: string) => Promise<AuthResult>
+  onSignUp: (email: string, password: string, inviteCode: string) => Promise<AuthResult>
   onSendMagicLink: (email: string) => Promise<AuthResult>
 }
 
@@ -27,6 +27,7 @@ export function LoginPage({
 }: LoginPageProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [inviteCode, setInviteCode] = useState('')
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in')
   const [message, setMessage] = useState<string | null>(null)
 
@@ -37,7 +38,7 @@ export function LoginPage({
     setMessage(null)
 
     const result = isSignUp
-      ? await onSignUp(email.trim(), password)
+      ? await onSignUp(email.trim(), password, inviteCode)
       : await onSignIn(email.trim(), password)
 
     setMessage(result.message ?? null)
@@ -59,7 +60,7 @@ export function LoginPage({
           <CardTitle>{isSignUp ? 'App-Konto erstellen' : 'Spielejournal anmelden'}</CardTitle>
           <CardDescription>
             {isSignUp
-              ? 'Lege einen eigenen App-Login mit E-Mail und Passwort an.'
+              ? 'Lege ein App-Konto mit E-Mail, Passwort und Einladungscode an.'
               : 'Melde dich mit deinem Spielejournal-App-Konto an.'}
           </CardDescription>
         </CardHeader>
@@ -92,6 +93,21 @@ export function LoginPage({
                   value={password}
                 />
               </Field>
+              {isSignUp ? (
+                <Field>
+                  <FieldLabel htmlFor="inviteCode">Einladungscode</FieldLabel>
+                  <Input
+                    autoComplete="off"
+                    id="inviteCode"
+                    onChange={(event) => setInviteCode(event.target.value)}
+                    required
+                    value={inviteCode}
+                  />
+                  <FieldDescription>
+                    Den Code bekommst du zusammen mit dem privaten App-Link.
+                  </FieldDescription>
+                </Field>
+              ) : null}
             </FieldGroup>
             {error ? <div className="app-alert">{error}</div> : null}
             {message ? <div className="app-notice">{message}</div> : null}
@@ -113,6 +129,7 @@ export function LoginPage({
               onClick={() => {
                 setMode(isSignUp ? 'sign-in' : 'sign-up')
                 setMessage(null)
+                setInviteCode('')
               }}
               type="button"
               variant="ghost"
