@@ -2,9 +2,15 @@ import { Check, Save, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { GameEntry, GameEntryDraft } from '../types'
-import { normalizeGameDraft, normalizePlayerName } from '../domain/dataNormalization'
+import { normalizeGameDraft } from '../domain/dataNormalization'
 import { getGameNameSuggestion } from '../domain/gameAliases'
+import {
+  getCurrentPlayerToken,
+  getPlayerSuggestions,
+  replaceCurrentPlayerToken,
+} from '../domain/playerAliases'
 import { clampWins, parseNameList } from '../lib/utils'
+import { PlayerChip } from './PlayerChip'
 import { Button } from './ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/Card'
 import { Field, FieldDescription, FieldGroup, FieldLabel } from './ui/Field'
@@ -32,24 +38,10 @@ function draftFromEntry(entry?: GameEntry | null): GameEntryDraft {
   }
 }
 
-function findDuplicatePlayerName(value: string) {
-  const seen = new Set<string>()
-
-  for (const player of value.split(',')) {
-    const normalized = normalizePlayerName(player)
-    if (!normalized) continue
-
-    const key = normalized.toLocaleLowerCase('de')
-    if (seen.has(key)) return normalized
-    seen.add(key)
-  }
-
-  return null
-}
-
 type GameEntryFormProps = {
   editingEntry?: GameEntry | null
   existingGameNames: string[]
+  knownPlayerNames: string[]
   onSubmit: (draft: GameEntryDraft) => void
   onCancelEdit: () => void
 }
@@ -57,6 +49,7 @@ type GameEntryFormProps = {
 export function GameEntryForm({
   editingEntry,
   existingGameNames,
+  knownPlayerNames,
   onSubmit,
   onCancelEdit,
 }: GameEntryFormProps) {
@@ -64,7 +57,6 @@ export function GameEntryForm({
   const [playersText, setPlayersText] = useState(() =>
     editingEntry?.mitspieler.join(', ') ?? '',
   )
-  const [playersError, setPlayersError] = useState<string | null>(null)
   const [ignoredSuggestion, setIgnoredSuggestion] = useState<string | null>(null)
 
   const suggestion = useMemo(() => {
@@ -74,21 +66,18 @@ export function GameEntryForm({
     return nextSuggestion
   }, [draft.spielName, existingGameNames, ignoredSuggestion])
 
+  const playerPreview = useMemo(() => parseNameList(playersText), [playersText])
+  const currentPlayerToken = useMemo(() => getCurrentPlayerToken(playersText), [playersText])
+  const playerSuggestions = useMemo(
+    () => getPlayerSuggestions(currentPlayerToken, knownPlayerNames),
+    [currentPlayerToken, knownPlayerNames],
+  )
+
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
 
     const anzahlRunden = Math.max(1, Number(draft.anzahlRunden) || 1)
     const gewonnen = clampWins(Number(draft.gewonnen) || 0, anzahlRunden)
-    const duplicatePlayer = findDuplicatePlayerName(playersText)
-
-    if (duplicatePlayer) {
-      setPlayersError(
-        `Bitte unterscheide doppelte Namen direkt, zum Beispiel ${duplicatePlayer} B. oder ${duplicatePlayer} S.`,
-      )
-      return
-    }
-
-    setPlayersError(null)
 
     onSubmit(normalizeGameDraft({
       ...draft,
@@ -198,16 +187,31 @@ export function GameEntryForm({
             <FieldLabel htmlFor="mitspieler">Mitspieler</FieldLabel>
             <Input
               id="mitspieler"
-              aria-invalid={playersError ? true : undefined}
-              onChange={(event) => {
-                setPlayersText(event.target.value)
-                setPlayersError(null)
-              }}
+              onChange={(event) => setPlayersText(event.target.value)}
               placeholder="Nele, Lennart, Lukas"
               value={playersText}
             />
+            {playerSuggestions.length ? (
+              <div className="player-suggestions" aria-label="Mitspieler-Vorschläge">
+                {playerSuggestions.map((player) => (
+                  <Button
+                    key={player}
+                    onClick={() => setPlayersText(replaceCurrentPlayerToken(playersText, player))}
+                    type="button"
+                    variant="secondary"
+                  >
+                    {player}
+                  </Button>
+                ))}
+              </div>
+            ) : null}
+            {playerPreview.length ? (
+              <div className="player-chip-list" aria-label="Ausgewählte Mitspieler">
+                {playerPreview.map((player) => <PlayerChip key={player} name={player} />)}
+              </div>
+            ) : null}
             <FieldDescription>
-              {playersError ?? 'Namen mit Komma trennen. Doppelte Namen bitte mit Kürzel unterscheiden, z. B. Lena B. oder Lennart S.'}
+              Namen mit Komma trennen. Bekannte Namen werden vorgeschlagen; doppelte Namen im selben Eintrag werden beim Speichern entfernt.
             </FieldDescription>
           </Field>
 
@@ -240,4 +244,3 @@ export function GameEntryForm({
     </Card>
   )
 }
-
