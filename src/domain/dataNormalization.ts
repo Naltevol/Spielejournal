@@ -1,37 +1,8 @@
 import type { GameEntry, GameEntryDraft } from '../types'
 import { normalizeGameName } from './gameAliases'
+import { normalizePlayerName, normalizePlayers } from './playerAliases'
 
-export function normalizePlayerName(value: string) {
-  return value.trim().replace(/\s+/g, ' ')
-}
-
-const duplicatePlayerAliases: Record<string, string> = {
-  lennart: 'Lennart S.',
-  lena: 'Lena B.',
-}
-
-export function normalizePlayers(values: string[]) {
-  const players: string[] = []
-  const playerCounts = new Map<string, number>()
-
-  for (const value of values) {
-    const normalized = normalizePlayerName(value)
-    if (!normalized) continue
-
-    const playerKey = normalized.toLocaleLowerCase('de')
-    const playerCount = (playerCounts.get(playerKey) ?? 0) + 1
-    playerCounts.set(playerKey, playerCount)
-
-    if (playerCount > 1 && duplicatePlayerAliases[playerKey]) {
-      players.push(duplicatePlayerAliases[playerKey])
-      continue
-    }
-
-    players.push(normalized)
-  }
-
-  return players
-}
+export { normalizePlayerName, normalizePlayers }
 
 export function normalizeGameDraft(draft: GameEntryDraft): GameEntryDraft {
   const anzahlRunden = Math.max(1, Number(draft.anzahlRunden) || 1)
@@ -56,4 +27,3 @@ export function createDuplicateKey(entry: Pick<GameEntry, 'spielName' | 'datum' 
     entry.gewonnen,
   ].join('::')
 }
-
