@@ -1,6 +1,7 @@
 import { Pencil, Trash2 } from 'lucide-react'
 import type { GameEntry } from '../types'
 import { formatDate } from '../lib/utils'
+import { PlayerChip } from './PlayerChip'
 import { Badge } from './ui/Badge'
 import { Button } from './ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/Card'
@@ -38,7 +39,13 @@ export function GameTable({ entries, onEdit, onDelete }: GameTableProps) {
                     <td className="games-table__game">{entry.spielName}</td>
                     <td>{entry.anzahlRunden}</td>
                     <td>{formatDate(entry.datum)}</td>
-                    <td>{entry.mitspieler.join(', ') || 'Solo'}</td>
+                    <td className="games-table__players">
+                      {entry.mitspieler.length ? (
+                        <div className="player-chip-list player-chip-list--table">
+                          {entry.mitspieler.map((player) => <PlayerChip key={player} name={player} />)}
+                        </div>
+                      ) : 'Solo'}
+                    </td>
                     <td className="games-table__result">
                       <Badge
                         className="result-badge"
